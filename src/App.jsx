@@ -4,6 +4,7 @@ import {
   TRACKS
 } from './data/questions';
 import YouTubePlayer from './components/YouTubePlayer';
+import CodeBlock from './components/CodeBlock';
 import { 
   Check, 
   Lock, 
@@ -14,8 +15,37 @@ import {
   Clock, 
   Flame,
   FileText,
-  Unlock
+  Unlock,
+  Terminal
 } from 'lucide-react';
+
+// Formatted summary with highlighted code tokens
+function FormattedSummary({ text }) {
+  if (!text) return null;
+
+  const codeTokenRegex = /(\b(?:python|pip|django-admin|manage\.py|makemigrations|migrate|createsuperuser|inspectdb|collectstatic|runserver|select_related|prefetch_related|filter|get|all|create|save|update|delete|union|__init__|__new__|__mro__|__iter__|__next__|__enter__|__exit__|__add__|__sub__|self|super\(\)|yield|lambda|def|class|import|from|with|try|except|finally|break|continue|pass|PYTHONPATH|GIL|args|kwargs|read|write|open|close|pickle|dump|dumps|load|loads|copy|deepcopy|keys|items|values|split|range|xrange)\b(?:\([^)]*\))?|\[:[^:]*:?[^\]]*\]|\[\]|\{\})/g;
+
+  const parts = text.split(codeTokenRegex);
+
+  return (
+    <span className="leading-relaxed">
+      {parts.map((part, i) => {
+        if (!part) return null;
+        if (part.match(codeTokenRegex)) {
+          return (
+            <code 
+              key={i} 
+              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded-md bg-zinc-900 text-amber-300 font-semibold border border-zinc-700 shadow-xs"
+            >
+              {part}
+            </code>
+          );
+        }
+        return part;
+      })}
+    </span>
+  );
+}
 
 const STORAGE_PREFIX = 'backend_dev_v5_';
 
@@ -481,18 +511,18 @@ export default function App() {
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1.5">
                 CORE INTERVIEW TAKEAWAY
               </p>
-              <p className="text-sm text-ink/90 leading-relaxed font-sans">
-                {currentQuestion.summary}
-              </p>
+              <div className="text-sm text-ink/90 leading-relaxed font-sans">
+                <FormattedSummary text={currentQuestion.summary} />
+              </div>
             </div>
 
-            {/* Quick Recall Box */}
+            {/* Quick Recall Code / Command Terminal */}
             {currentQuestion.tip && (
-              <div className="p-3.5 rounded-xl border border-line bg-white text-xs text-ink flex items-start gap-2.5 shadow-subtle">
-                <span className="font-bold text-[10px] uppercase tracking-wide px-2 py-0.5 rounded border border-line-strong bg-paper-muted text-ink flex-shrink-0">
-                  QUICK RECALL
-                </span>
-                <span className="font-mono text-xs text-ink/90">{currentQuestion.tip}</span>
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1">
+                  SYNTAX & COMMAND REFERENCE
+                </p>
+                <CodeBlock code={currentQuestion.tip} />
               </div>
             )}
 

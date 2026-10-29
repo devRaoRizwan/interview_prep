@@ -13,3 +13,4 @@ export const DJANGO_DAYS = [
   { day: 9, title: 'Signals, Context & Exceptions', questionIds: [41, 42, 43, 44, 45] },
   { day: 10, title: 'Advanced Models, Views & Caching', questionIds: [46, 47, 48, 49, 50, 51, 52, 53, 54] },
 ];
+
