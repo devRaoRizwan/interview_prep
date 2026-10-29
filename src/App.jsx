@@ -48,6 +48,46 @@ function FormattedSummary({ text }) {
   );
 }
 
+// Format seconds into clean readable duration (e.g. 36s or 1m 24s)
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '0s';
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+// Extract concise topic title for question chips
+function getShortQuestionTitle(question) {
+  if (!question) return '';
+  let title = question.title || '';
+  let clean = title
+    .replace(/^What is the command (to|for) /i, '')
+    .replace(/^What is the Command To /i, '')
+    .replace(/^What is the difference between /i, '')
+    .replace(/^Difference Between /i, '')
+    .replace(/^Difference between /i, '')
+    .replace(/^How to /i, '')
+    .replace(/^Explain /i, '')
+    .replace(/^What is a /i, '')
+    .replace(/^What is the /i, '')
+    .replace(/^What is /i, '')
+    .replace(/^What are /i, '')
+    .replace(/^What do you mean by (the )?/i, '')
+    .replace(/^Which is the /i, '')
+    .replace(/^Which /i, '')
+    .replace(/ in Django\??$/i, '')
+    .replace(/ in Python\??$/i, '')
+    .replace(/ using Django QuerySet\??$/i, '')
+    .replace(/\?$/, '')
+    .trim();
+
+  if (clean.length > 32) {
+    clean = clean.slice(0, 30) + '…';
+  }
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : (question.tags?.[0] || 'Question');
+}
+
 const STORAGE_PREFIX = 'backend_dev_v5_';
 
 export default function App() {
@@ -327,9 +367,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. DAY SELECTOR BAR (10 DAYS) */}
-      <nav className="border-b border-line bg-white/70 backdrop-blur-md sticky top-14 sm:top-16 z-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      {/* 2. PROPER DAY SELECTOR CHIPS BAR */}
+      <nav className="border-b border-line bg-white/80 backdrop-blur-md sticky top-14 sm:top-16 z-20 shadow-xs">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted flex-shrink-0 mr-1 hidden md:inline-block">
+            DAYS:
+          </span>
           {currentTrack.days.map((d) => {
             const dayQuestions = currentTrack.questions.filter((q) => q.day === d.day);
             const done = dayQuestions.filter((q) => !!completedMap[getQuestionKey(activeTrack, q.id)]).length;
@@ -342,43 +385,108 @@ export default function App() {
                 key={d.day}
                 type="button"
                 onClick={() => handleSelectDay(d.day)}
-                className={`flex-shrink-0 px-2.5 sm:px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                disabled={!isUnlocked}
+                title={`Day ${d.day}: ${d.title} (${done}/${dayQuestions.length} completed)`}
+                className={`group flex-shrink-0 h-8 sm:h-8.5 px-3 rounded-full border text-xs font-heading font-semibold transition-all duration-150 flex items-center gap-2 select-none ${
                   isSelected
-                    ? 'comback-primary-btn'
+                    ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-zinc-950/15'
                     : isComplete
-                    ? 'comback-completed-btn'
+                    ? 'bg-emerald-50 text-emerald-950 border-emerald-200/90 hover:bg-emerald-100 hover:border-emerald-300 shadow-xs'
                     : !isUnlocked
-                    ? 'border-line bg-paper-muted text-muted/40 cursor-not-allowed opacity-60'
-                    : 'comback-button'
+                    ? 'bg-zinc-100/60 text-zinc-400 border-zinc-200/50 cursor-not-allowed opacity-50'
+                    : 'bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 shadow-xs'
                 }`}
               >
-                <span>Day {d.day}</span>
-                {isComplete ? (
-                  <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
-                ) : !isUnlocked ? (
-                  <Lock className="w-2.5 h-2.5 opacity-50" />
-                ) : (
-                  <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-muted'}`}>
-                    {done}/{dayQuestions.length}
-                  </span>
-                )}
+                {/* Status Indicator Icon / Day Number Badge */}
+                <span
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-colors ${
+                    isSelected
+                      ? isComplete
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-white/20 text-white'
+                      : isComplete
+                      ? 'bg-emerald-600 text-white'
+                      : !isUnlocked
+                      ? 'bg-zinc-200 text-zinc-400'
+                      : 'bg-zinc-100 text-zinc-700 group-hover:bg-zinc-200'
+                  }`}
+                >
+                  {isComplete ? (
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  ) : !isUnlocked ? (
+                    <Lock className="w-2.5 h-2.5" />
+                  ) : (
+                    d.day
+                  )}
+                </span>
+
+                {/* Day Label */}
+                <span className="whitespace-nowrap">Day {d.day}</span>
+
+                {/* Progress fraction badge */}
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected
+                      ? 'bg-white/20 text-white'
+                      : isComplete
+                      ? 'bg-emerald-200/60 text-emerald-800'
+                      : !isUnlocked
+                      ? 'text-zinc-400'
+                      : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200/70 group-hover:text-zinc-700'
+                  }`}
+                >
+                  {done}/{dayQuestions.length}
+                </span>
               </button>
             );
           })}
         </div>
       </nav>
 
-      {/* 3. ACTIVE DAY QUESTION STEPPER */}
+      {/* 3. PROPER QUESTION CHIPS BAR (ACTIVE DAY) */}
       <div className="bg-paper-muted border-b border-line">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3 overflow-x-auto no-scrollbar text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold uppercase tracking-wider text-muted text-[10px] mr-1 flex-shrink-0">
-              Day {currentQuestion.day}:
-            </span>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+          
+          {/* Day Title & Lock Toggle Header */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-line text-[10px] font-extrabold uppercase tracking-wider text-muted font-mono shadow-xs">
+                DAY {currentQuestion.day} OF {currentTrack.days.length}
+              </span>
+              <span className="text-xs sm:text-sm font-heading font-bold text-ink truncate">
+                {currentDayInfo.title}
+              </span>
+            </div>
+
+            {/* Strict Lock Mode Toggle */}
+            <button
+              type="button"
+              onClick={() => setStrictLock(!strictLock)}
+              title="Toggle strict sequential locking"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-line bg-white hover:bg-zinc-50 text-[11px] font-bold text-muted hover:text-ink transition-colors shadow-xs"
+            >
+              {strictLock ? (
+                <>
+                  <Lock className="w-3 h-3 text-muted" />
+                  <span>Strict Lock: <strong className="text-ink">ON</strong></span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3 h-3 text-signal-ink" />
+                  <span>Strict Lock: <strong className="text-signal-ink">OFF</strong></span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* The 3 Proper Question Chips */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
             {questionsInCurrentDay.map((q, idx) => {
               const isSelected = currentQuestion.id === q.id;
               const isDone = !!completedMap[getQuestionKey(activeTrack, q.id)];
               const isUnlocked = isQuestionUnlocked(q.id);
+              const shortTopic = getShortQuestionTitle(q);
+              const durationSec = q.endSeconds - q.startSeconds;
 
               return (
                 <button
@@ -386,39 +494,81 @@ export default function App() {
                   type="button"
                   disabled={!isUnlocked}
                   onClick={() => setActiveQuestionId(q.id)}
-                  className={`h-7 px-2.5 rounded-md border text-xs font-heading font-bold transition-all flex items-center gap-1 ${
+                  className={`group flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl sm:rounded-full border text-xs transition-all duration-150 select-none text-left ${
                     isSelected
-                      ? 'comback-primary-btn'
+                      ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-zinc-950/15'
                       : isDone
-                      ? 'comback-completed-btn'
+                      ? 'bg-emerald-50 text-emerald-950 border-emerald-200/90 hover:bg-emerald-100 hover:border-emerald-300 shadow-xs'
                       : !isUnlocked
-                      ? 'border-line bg-paper-muted text-muted/40 cursor-not-allowed'
-                      : 'comback-button'
+                      ? 'bg-zinc-100/60 text-zinc-400 border-zinc-200/50 cursor-not-allowed opacity-50'
+                      : 'bg-white text-zinc-800 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 shadow-xs'
                   }`}
                 >
-                  {isDone ? (
-                    <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
-                  ) : !isUnlocked ? (
-                    <Lock className="w-2.5 h-2.5 opacity-40" />
-                  ) : (
-                    <span>Q{idx + 1}</span>
-                  )}
-                  <span className="hidden sm:inline text-[11px] opacity-75">#{q.id}</span>
+                  {/* Left: Avatar Badge & Labels */}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold flex-shrink-0 transition-colors ${
+                        isSelected
+                          ? isDone
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-white text-zinc-950'
+                          : isDone
+                          ? 'bg-emerald-600 text-white'
+                          : !isUnlocked
+                          ? 'bg-zinc-200 text-zinc-400'
+                          : 'bg-zinc-100 text-zinc-700 group-hover:bg-zinc-200'
+                      }`}
+                    >
+                      {isDone ? (
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      ) : !isUnlocked ? (
+                        <Lock className="w-2.5 h-2.5" />
+                      ) : (
+                        `Q${idx + 1}`
+                      )}
+                    </span>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-heading font-extrabold text-xs">
+                          Q{idx + 1}
+                        </span>
+                        <span className="text-[10px] font-mono opacity-60">
+                          #{q.id}
+                        </span>
+                      </div>
+                      <p className={`text-[11px] truncate max-w-[170px] sm:max-w-[120px] md:max-w-[160px] ${
+                        isSelected ? 'text-zinc-300' : isDone ? 'text-emerald-800/80' : 'text-zinc-500'
+                      }`}>
+                        {shortTopic}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Duration Pill / Active Signal */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {isSelected && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    )}
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                        isSelected
+                          ? 'bg-white/20 text-white'
+                          : isDone
+                          ? 'bg-emerald-200/60 text-emerald-800'
+                          : !isUnlocked
+                          ? 'text-zinc-400'
+                          : 'bg-zinc-100 text-zinc-600 group-hover:bg-zinc-200/80'
+                      }`}
+                    >
+                      {formatDuration(durationSec)}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] text-muted flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setStrictLock(!strictLock)}
-              className="text-[10px] font-bold text-muted hover:text-ink px-1.5 py-0.5 rounded border border-line bg-white shadow-subtle flex items-center gap-1"
-            >
-              {strictLock ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5 text-signal-ink" />}
-              <span>Lock: {strictLock ? 'ON' : 'OFF'}</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -430,24 +580,33 @@ export default function App() {
           
           {/* Question Title & Meta Strip */}
           <div className="p-5 sm:p-6 pb-4 border-b border-line">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
-                {currentTrack.fullName.toUpperCase()} • DAY {currentQuestion.day} • Q#{currentQuestion.id}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-extrabold uppercase tracking-wider text-ink font-heading shadow-xs">
+                  <span>{currentTrack.icon}</span>
+                  <span>{currentTrack.name}</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
+                  Day {currentQuestion.day}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
+                  Q{currentQuestion.dayIndex} (#{currentQuestion.id})
+                </span>
+              </div>
 
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2.5 py-0.5 rounded-md border border-line shadow-subtle">
+                <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2.5 py-0.5 rounded-full border border-line shadow-xs">
                   <Clock className="w-3.5 h-3.5 text-muted" />
-                  {currentQuestion.startTime} — {currentQuestion.endTime} ({currentQuestion.endSeconds - currentQuestion.startSeconds}s)
+                  {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
                 </span>
 
                 {isCurrentCompleted ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-signal-ink bg-signal-pale border border-signal-border px-2.5 py-0.5 rounded-md">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-signal-ink bg-signal-pale border border-signal-border px-2.5 py-0.5 rounded-full">
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     Mastered
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted border border-line px-2 py-0.5 rounded-md">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted border border-line px-2.5 py-0.5 rounded-full shadow-xs">
                     Pending
                   </span>
                 )}
