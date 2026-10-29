@@ -82,8 +82,8 @@ function getShortQuestionTitle(question) {
     .replace(/\?$/, '')
     .trim();
 
-  if (clean.length > 32) {
-    clean = clean.slice(0, 30) + '…';
+  if (clean.length > 50) {
+    clean = clean.slice(0, 48) + '…';
   }
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : (question.tags?.[0] || 'Question');
 }
@@ -306,7 +306,7 @@ export default function App() {
       
       {/* 1. TOP MINIMAL BAR */}
       <header className="border-b border-line bg-white sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
           
           {/* Logo & Brand */}
           <div className="flex items-center gap-2.5">
@@ -369,7 +369,7 @@ export default function App() {
 
       {/* 2. PROPER DAY SELECTOR CHIPS BAR */}
       <nav className="border-b border-line bg-white/80 backdrop-blur-md sticky top-14 sm:top-16 z-20 shadow-xs">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted flex-shrink-0 mr-1 hidden md:inline-block">
             DAYS:
           </span>
@@ -445,7 +445,7 @@ export default function App() {
 
       {/* 3. PROPER QUESTION CHIPS BAR (ACTIVE DAY) */}
       <div className="bg-paper-muted border-b border-line">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           
           {/* Day Title & Lock Toggle Header */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
@@ -537,7 +537,7 @@ export default function App() {
                           #{q.id}
                         </span>
                       </div>
-                      <p className={`text-[11px] truncate max-w-[170px] sm:max-w-[120px] md:max-w-[160px] ${
+                      <p className={`text-[11px] truncate max-w-[200px] sm:max-w-[180px] md:max-w-[240px] lg:max-w-[280px] xl:max-w-[340px] ${
                         isSelected ? 'text-zinc-300' : isDone ? 'text-emerald-800/80' : 'text-zinc-500'
                       }`}>
                         {shortTopic}
@@ -572,103 +572,157 @@ export default function App() {
         </div>
       </div>
 
-      {/* 4. MAIN FOCUSED SINGLE VIDEO STATION */}
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        
-        {/* The Single Question Card */}
-        <section className="comback-card overflow-hidden">
-          
-          {/* Question Title & Meta Strip */}
-          <div className="p-5 sm:p-6 pb-4 border-b border-line">
-            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-extrabold uppercase tracking-wider text-ink font-heading shadow-xs">
-                  <span>{currentTrack.icon}</span>
-                  <span>{currentTrack.name}</span>
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
-                  Day {currentQuestion.day}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
-                  Q{currentQuestion.dayIndex} (#{currentQuestion.id})
-                </span>
+      {/* 4. MAIN EXPANSIVE WORKSPACE (2-COLUMN ON DESKTOP, USES FULL SCREEN SPACE) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          {/* LEFT COLUMN: FOCUSED VIDEO STATION & CONTROLS (7 of 12 cols on desktop) */}
+          <div className="lg:col-span-7 space-y-4">
+            <section className="comback-card overflow-hidden">
+              
+              {/* Question Title & Meta Strip */}
+              <div className="p-5 sm:p-6 pb-4 border-b border-line">
+                <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-extrabold uppercase tracking-wider text-ink font-heading shadow-xs">
+                      <span>{currentTrack.icon}</span>
+                      <span>{currentTrack.name}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
+                      Day {currentQuestion.day}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
+                      Q{currentQuestion.dayIndex} (#{currentQuestion.id})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2.5 py-0.5 rounded-full border border-line shadow-xs">
+                      <Clock className="w-3.5 h-3.5 text-muted" />
+                      {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
+                    </span>
+
+                    {isCurrentCompleted ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-signal-ink bg-signal-pale border border-signal-border px-2.5 py-0.5 rounded-full">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                        Mastered
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted border border-line px-2.5 py-0.5 rounded-full shadow-xs">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <h1 className="m-0 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight leading-snug">
+                  {currentQuestion.title}
+                </h1>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2.5 py-0.5 rounded-full border border-line shadow-xs">
-                  <Clock className="w-3.5 h-3.5 text-muted" />
-                  {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
-                </span>
+              {/* Embedded YouTube Player: strictly plays only this particular question part */}
+              <div className="p-4 sm:p-6 pb-3">
+                <YouTubePlayer
+                  key={`${activeTrack}-${currentQuestion.id}`}
+                  currentQuestion={currentQuestion}
+                  videoId={currentTrack.videoId}
+                  videoBaseUrl={currentTrack.videoBaseUrl}
+                  loopMode={loopMode}
+                  setLoopMode={setLoopMode}
+                  onSegmentEnd={() => {}}
+                />
+              </div>
 
-                {isCurrentCompleted ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-signal-ink bg-signal-pale border border-signal-border px-2.5 py-0.5 rounded-full">
-                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    Mastered
+              {/* Primary Completion Button */}
+              <div className="px-4 sm:px-6 py-4 bg-paper-muted border-t border-b border-line flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleToggleComplete(currentQuestion.id)}
+                  className={`w-full sm:w-auto px-5 py-2.5 text-sm flex items-center justify-center gap-2.5 ${
+                    isCurrentCompleted
+                      ? 'comback-completed-btn'
+                      : 'comback-primary-btn'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                    isCurrentCompleted 
+                      ? 'border-signal-border bg-signal-ink text-white' 
+                      : 'border-white/40 bg-white/10 text-white'
+                  }`}>
+                    {isCurrentCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </div>
+                  <span>
+                    {isCurrentCompleted 
+                      ? '✓ Mastered! Click to Mark Incomplete' 
+                      : 'Mark as Done & Unlock Next Question →'}
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted border border-line px-2.5 py-0.5 rounded-full shadow-xs">
-                    Pending
-                  </span>
-                )}
+                </button>
+
+                <div className="text-xs text-muted font-medium">
+                  {isNextUnlocked && hasNext && (
+                    <span className="text-signal-ink font-bold">✓ Question #{currentQuestion.id + 1} unlocked</span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <h1 className="m-0 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight leading-snug">
-              {currentQuestion.title}
-            </h1>
-          </div>
+              {/* Prev / Next Navigation Footer */}
+              <div className="px-5 sm:px-6 py-3.5 bg-paper-muted flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => hasPrevious && setActiveQuestionId(currentQuestion.id - 1)}
+                  disabled={!hasPrevious}
+                  className="comback-button px-3.5 py-2 text-xs flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous</span>
+                </button>
 
-          {/* Embedded YouTube Player: strictly plays only this particular question part */}
-          <div className="p-4 sm:p-6 pb-3">
-            <YouTubePlayer
-              key={`${activeTrack}-${currentQuestion.id}`}
-              currentQuestion={currentQuestion}
-              videoId={currentTrack.videoId}
-              videoBaseUrl={currentTrack.videoBaseUrl}
-              loopMode={loopMode}
-              setLoopMode={setLoopMode}
-              onSegmentEnd={() => {}}
-            />
-          </div>
+                <span className="text-xs text-muted font-medium font-mono">
+                  Question {currentQuestion.id} of {currentTrack.totalCount}
+                </span>
 
-          {/* Primary Completion Button */}
-          <div className="px-4 sm:px-6 py-4 bg-paper-muted border-t border-b border-line flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => handleToggleComplete(currentQuestion.id)}
-              className={`w-full sm:w-auto px-5 py-2.5 text-sm flex items-center justify-center gap-2.5 ${
-                isCurrentCompleted
-                  ? 'comback-completed-btn'
-                  : 'comback-primary-btn'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                isCurrentCompleted 
-                  ? 'border-signal-border bg-signal-ink text-white' 
-                  : 'border-white/40 bg-white/10 text-white'
-              }`}>
-                {isCurrentCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                <button
+                  type="button"
+                  onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
+                  disabled={!hasNext || !isNextUnlocked}
+                  className={`px-3.5 py-2 text-xs flex items-center gap-1.5 ${
+                    !isNextUnlocked && hasNext 
+                      ? 'comback-button opacity-50 cursor-not-allowed' 
+                      : 'comback-primary-btn'
+                  }`}
+                >
+                  <span>Next</span>
+                  {!isNextUnlocked && hasNext ? (
+                    <Lock className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </button>
               </div>
-              <span>
-                {isCurrentCompleted 
-                  ? '✓ Mastered! Click to Mark Incomplete' 
-                  : 'Mark as Done & Unlock Next Question →'}
-              </span>
-            </button>
-
-            <div className="text-xs text-muted font-medium">
-              {isNextUnlocked && hasNext && (
-                <span className="text-signal-ink font-bold">✓ Question #{currentQuestion.id + 1} unlocked</span>
-              )}
-            </div>
+            </section>
           </div>
 
-          {/* Concept Takeaways & In-Depth Study */}
-          <div className="p-5 sm:p-6 space-y-4">
+          {/* RIGHT COLUMN: STUDY COMPANION, CODE SYNTAX, DOCS & NOTES (5 of 12 cols on desktop) */}
+          <div className="lg:col-span-5 space-y-4">
             
-            {/* Core Takeaway */}
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1.5">
+            {/* Syntax & Command Reference */}
+            {currentQuestion.tip && (
+              <div className="comback-card p-5">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
+                    SYNTAX & COMMAND REFERENCE
+                  </p>
+                  <span className="text-[10px] font-mono font-bold text-muted uppercase bg-paper-muted px-2 py-0.5 rounded-full border border-line">
+                    Quick Recall
+                  </span>
+                </div>
+                <CodeBlock code={currentQuestion.tip} />
+              </div>
+            )}
+
+            {/* Core Interview Takeaway */}
+            <div className="comback-card p-5">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">
                 CORE INTERVIEW TAKEAWAY
               </p>
               <div className="text-sm text-ink/90 leading-relaxed font-sans">
@@ -676,35 +730,25 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick Recall Code / Command Terminal */}
-            {currentQuestion.tip && (
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1">
-                  SYNTAX & COMMAND REFERENCE
-                </p>
-                <CodeBlock code={currentQuestion.tip} />
-              </div>
-            )}
-
             {/* In-Depth Official Reading & Documentation */}
-            <div className="pt-2">
+            <div className="comback-card p-5">
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2.5">
                 IN-DEPTH READING & OFFICIAL DOCUMENTATION
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 gap-2.5">
                 {currentQuestion.articles.map((art, idx) => (
                   <a
                     key={idx}
                     href={art.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="comback-button p-3.5 flex items-start justify-between gap-3 text-left group"
+                    className="comback-button p-3 flex items-start justify-between gap-3 text-left group"
                   >
                     <div className="min-w-0">
                       <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider block">
                         {art.source}
                       </span>
-                      <strong className="text-xs font-bold font-heading text-ink group-hover:text-ink block mt-1 line-clamp-1">
+                      <strong className="text-xs font-bold font-heading text-ink group-hover:text-ink block mt-0.5 line-clamp-1">
                         {art.title}
                       </strong>
                     </div>
@@ -715,102 +759,51 @@ export default function App() {
             </div>
 
             {/* Personal Study Notes */}
-            <div className="pt-2 border-t border-line">
+            <div className="comback-card p-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
                   YOUR INTERVIEW NOTES
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShowNotes(!showNotes)}
-                  className="text-xs text-muted hover:text-ink font-bold"
-                >
-                  {showNotes ? 'Collapse' : currentNote ? 'Edit Notes' : '+ Add Notes'}
-                </button>
+                <span className="text-[10px] text-muted font-mono">
+                  Auto-saved
+                </span>
               </div>
 
-              {showNotes ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={currentNote}
-                    onChange={(e) => setCurrentNote(e.target.value)}
-                    onBlur={handleSaveNote}
-                    placeholder="Write your explanation, syntax reminders, or interview answers here..."
-                    rows={3}
-                    className="w-full text-xs font-sans bg-white border border-line-strong rounded-xl p-3 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y shadow-subtle"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleSaveNote}
-                      className="comback-button px-3.5 py-1 text-xs font-bold"
-                    >
-                      Save Note
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                currentNote && (
-                  <div 
-                    onClick={() => setShowNotes(true)}
-                    className="p-3 rounded-xl border border-line bg-paper-muted text-xs text-ink/80 italic cursor-pointer hover:border-line-strong transition-colors"
-                  >
-                    "{currentNote}"
-                  </div>
-                )
-              )}
+              <textarea
+                value={currentNote}
+                onChange={(e) => setCurrentNote(e.target.value)}
+                onBlur={handleSaveNote}
+                placeholder="Write your explanation, syntax reminders, or interview answers here while watching..."
+                rows={4}
+                className="w-full text-xs font-sans bg-white border border-line-strong rounded-xl p-3 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y shadow-subtle"
+              />
+              <div className="flex justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveNote}
+                  className="comback-button px-3.5 py-1 text-xs font-bold"
+                >
+                  Save Note
+                </button>
+              </div>
             </div>
+
+            {/* Motivational Habit Footer Banner */}
+            <div className="comback-card p-3.5 text-xs text-muted flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <span>
+                  <strong>Pace:</strong> 3 questions each day. Finish all {currentTrack.totalCount} {currentTrack.name} questions in {currentTrack.days.length} days!
+                </span>
+              </div>
+              <span className="text-ink font-bold font-mono text-xs flex-shrink-0">
+                Day {currentQuestion.day}/{currentTrack.days.length}
+              </span>
+            </div>
+
           </div>
 
-          {/* Prev / Next Navigation Footer */}
-          <div className="px-5 sm:px-6 py-4 bg-paper-muted border-t border-line flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => hasPrevious && setActiveQuestionId(currentQuestion.id - 1)}
-              disabled={!hasPrevious}
-              className="comback-button px-3.5 py-2 text-xs flex items-center gap-1.5"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Previous Question</span>
-            </button>
-
-            <span className="text-xs text-muted font-medium font-mono">
-              Q{currentQuestion.id} of {currentTrack.totalCount}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
-              disabled={!hasNext || !isNextUnlocked}
-              className={`px-3.5 py-2 text-xs flex items-center gap-1.5 ${
-                !isNextUnlocked && hasNext 
-                  ? 'comback-button opacity-50 cursor-not-allowed' 
-                  : 'comback-primary-btn'
-              }`}
-            >
-              <span>Next Question</span>
-              {!isNextUnlocked && hasNext ? (
-                <Lock className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-        </section>
-
-        {/* Motivational Habit Footer Banner */}
-        <div className="comback-card p-3.5 text-xs text-muted flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            <span>
-              <strong>Pace:</strong> 3 questions each day. Finish all {currentTrack.totalCount} {currentTrack.name} questions in {currentTrack.days.length} days!
-            </span>
-          </div>
-          <span className="text-ink font-bold font-mono text-xs flex-shrink-0">
-            Day {currentQuestion.day}/{currentTrack.days.length}
-          </span>
         </div>
-
       </main>
 
       {/* Clean Minimal Page Footer */}
