@@ -201,11 +201,11 @@ export default function App() {
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-ink text-white font-heading font-extrabold text-base flex items-center justify-center shadow-subtle flex-shrink-0">
-              DJ
+              BD
             </div>
             <div>
               <strong className="block font-heading font-extrabold text-sm tracking-tight text-ink">
-                Django Journey
+                Backend Dev Journey
               </strong>
               <small className="block text-muted text-[11px] font-medium">
                 10-Day Plan • 5 Questions/Day
@@ -321,9 +321,9 @@ export default function App() {
               <div className="flex items-center justify-between pb-3 border-b border-line">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-ink text-white font-heading font-extrabold text-sm flex items-center justify-center">
-                    DJ
+                    BD
                   </div>
-                  <strong className="font-heading font-extrabold text-sm">Django Journey</strong>
+                  <strong className="font-heading font-extrabold text-sm">Backend Dev Journey</strong>
                 </div>
                 <button 
                   type="button" 
@@ -414,7 +414,7 @@ export default function App() {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
-                10-DAY STUDY PLAN • 5 QUESTIONS PER DAY
+                BACKEND DEV INTERVIEW PREP • 10-DAY ROADMAP
               </p>
               <h1 className="m-0 mt-0.5 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
                 Day {currentDayInfo.day}: {currentDayInfo.title}

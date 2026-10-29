@@ -1,6 +1,6 @@
-# Django Interview Prep - 10-Day Focused Study Journey
+# Backend Dev Journey - 10-Day Focused Interview Prep
 
-A clean, distraction-free web app for mastering 54 core Django interview questions at a disciplined pace of **5 questions per day** across a **10-day roadmap**.
+A clean, distraction-free web app for mastering 54 core backend development & Django interview questions at a disciplined pace of **5 questions per day** across a **10-day roadmap**.
 
 Inspired by [comback2026.vercel.app](https://comback2026.vercel.app/).
 
