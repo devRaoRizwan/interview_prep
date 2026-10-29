@@ -3,12 +3,9 @@ import {
   Play, 
   Pause, 
   RotateCcw, 
-  SkipBack, 
-  SkipForward, 
   ExternalLink, 
   Repeat, 
   FastForward, 
-  Check, 
   Clock,
   Sparkles
 } from 'lucide-react';
@@ -16,14 +13,7 @@ import { VIDEO_ID, VIDEO_BASE_URL } from '../data/questions';
 
 export default function YouTubePlayer({
   currentQuestion,
-  onNextQuestion,
-  onPreviousQuestion,
-  hasPrevious,
-  hasNext,
-  isCompleted,
-  onToggleCompleted,
-  autoAdvance,
-  setAutoAdvance,
+  onSegmentEnd,
   loopMode,
   setLoopMode
 }) {
@@ -67,7 +57,7 @@ export default function YouTubePlayer({
     if (!apiReady || playerRef.current || useIframeFallback) return;
 
     try {
-      playerRef.current = new window.YT.Player('yt-iframe-instance', {
+      playerRef.current = new window.YT.Player('yt-single-player', {
         videoId: VIDEO_ID,
         playerVars: {
           start: currentQuestion.startSeconds,
@@ -93,7 +83,7 @@ export default function YouTubePlayer({
           onStateChange: (event) => {
             setPlayerState(event.data);
             if (event.data === window.YT.PlayerState.ENDED) {
-              handleSegmentEnd();
+              handleEnded();
             }
           },
           onError: () => {
@@ -118,7 +108,7 @@ export default function YouTubePlayer({
     };
   }, [apiReady, useIframeFallback]);
 
-  // Handle question switch
+  // Handle question switch: reload at exact start second
   useEffect(() => {
     setCurrentTime(currentQuestion.startSeconds);
 
@@ -138,7 +128,7 @@ export default function YouTubePlayer({
     }
   }, [currentQuestion]);
 
-  // Interval timer to strictly bound segment playback
+  // Strictly enforce stopping at question.endSeconds
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
 
@@ -149,30 +139,31 @@ export default function YouTubePlayer({
         setCurrentTime(time);
 
         if (time >= currentQuestion.endSeconds) {
-          handleSegmentEnd();
+          handleEnded();
         }
       } catch (e) {
-        // ignore polling error
+        // ignore polling errors
       }
     }, 250);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [currentQuestion, loopMode, autoAdvance]);
+  }, [currentQuestion, loopMode]);
 
-  const handleSegmentEnd = () => {
+  const handleEnded = () => {
     if (loopMode) {
       if (playerRef.current && playerRef.current.seekTo) {
         playerRef.current.seekTo(currentQuestion.startSeconds, true);
         playerRef.current.playVideo();
       }
-    } else if (autoAdvance && hasNext) {
-      onNextQuestion();
     } else {
       if (playerRef.current && playerRef.current.pauseVideo) {
         playerRef.current.pauseVideo();
         playerRef.current.seekTo(currentQuestion.startSeconds, true);
+      }
+      if (onSegmentEnd) {
+        onSegmentEnd();
       }
     }
   };
@@ -220,58 +211,12 @@ export default function YouTubePlayer({
   const segmentPercent = Math.min(100, (currentProgressSeconds / segmentDuration) * 100);
 
   return (
-    <div className="border border-line rounded-[14px] bg-white shadow-card overflow-hidden">
-      {/* Player Header Banner */}
-      <div className="p-4 sm:p-5 pb-3 border-b border-line flex flex-wrap items-center justify-between gap-3 bg-white">
-        <div>
-          <p className="m-0 text-[10px] font-extrabold uppercase tracking-widest text-ink">
-            NOW PLAYING • {currentQuestion.partName.toUpperCase()}
-          </p>
-          <h2 className="m-0 mt-1 text-base sm:text-lg font-bold font-heading text-ink tracking-tight">
-            {currentQuestion.title}
-          </h2>
-          <div className="mt-1 flex items-center gap-2 text-xs text-muted">
-            <span className="font-mono font-semibold text-ink">
-              {currentQuestion.startTime} — {currentQuestion.endTime}
-            </span>
-            <span>•</span>
-            <span>{segmentDuration}s segment</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Mark Complete Checkbox / Button */}
-          <button
-            type="button"
-            onClick={() => onToggleCompleted(currentQuestion.id)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
-              isCompleted
-                ? 'bg-ink border-ink text-white shadow-sm'
-                : 'bg-white border-line-strong text-ink hover:bg-paper-muted'
-            }`}
-          >
-            <Check className={`w-3.5 h-3.5 ${isCompleted ? 'stroke-[2.5]' : 'text-muted'}`} />
-            <span>{isCompleted ? 'Mastered' : 'Mark Done'}</span>
-          </button>
-
-          {/* Open on YouTube */}
-          <a
-            href={`${VIDEO_BASE_URL}&t=${currentQuestion.startSeconds}s`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open on YouTube at this exact timestamp"
-            className="p-1.5 rounded-lg border border-line text-muted hover:text-ink hover:bg-paper-muted transition-colors"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
-      </div>
-
-      {/* Video Container (16:9 ratio) */}
+    <div className="w-full bg-white rounded-xl overflow-hidden border border-line">
+      {/* 16:9 Video Player */}
       <div className="relative w-full pt-[56.25%] bg-black">
         {!useIframeFallback ? (
           <div className="absolute inset-0 w-full h-full">
-            <div id="yt-iframe-instance" className="w-full h-full" />
+            <div id="yt-single-player" className="w-full h-full" />
           </div>
         ) : (
           <iframe
@@ -286,90 +231,56 @@ export default function YouTubePlayer({
       </div>
 
       {/* Segment Timeline Bar */}
-      <div className="w-full h-1.5 bg-line overflow-hidden">
+      <div className="w-full h-1 bg-line overflow-hidden">
         <div 
           className="h-full bg-ink transition-all duration-150"
           style={{ width: `${segmentPercent}%` }}
         />
       </div>
 
-      {/* Recall Tip Box */}
-      {currentQuestion.tip && (
-        <div className="mx-4 sm:mx-5 mt-3.5 p-3 rounded-xl border border-line bg-paper-muted text-xs text-ink flex items-start gap-2.5">
-          <span className="font-bold text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-white border border-line text-ink flex-shrink-0">
-            QUICK RECALL
-          </span>
-          <span className="font-mono text-xs text-ink/90">{currentQuestion.tip}</span>
-        </div>
-      )}
-
-      {/* Player Controls Bar */}
-      <div className="p-4 sm:p-5 pt-3 flex flex-wrap items-center justify-between gap-3">
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      {/* Sub-Player Controls Bar */}
+      <div className="px-4 py-2.5 bg-paper-muted border-t border-line flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onPreviousQuestion}
-            disabled={!hasPrevious}
-            title="Previous question"
-            className="h-8 px-2.5 rounded-lg border border-line bg-white hover:bg-paper-muted text-ink disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center text-xs font-bold"
+            onClick={handleReplaySegment}
+            title="Replay this answer segment"
+            className="h-7 px-2.5 rounded-md border border-line bg-white hover:border-ink hover:text-ink text-muted font-bold transition-all flex items-center gap-1.5 shadow-subtle"
           >
-            <SkipBack className="w-3.5 h-3.5 mr-1" />
-            <span className="hidden sm:inline">Prev</span>
+            <RotateCcw className="w-3 h-3" />
+            <span>Replay Answer</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSeekRelative(-5)}
             title="Rewind 5 seconds"
-            className="h-8 px-2 rounded-lg border border-line bg-white hover:bg-paper-muted text-xs font-mono font-medium text-ink transition-colors"
+            className="h-7 px-2 rounded-md border border-line bg-white hover:border-ink text-muted hover:text-ink font-mono font-medium transition-colors"
           >
             -5s
           </button>
 
           <button
             type="button"
-            onClick={handleReplaySegment}
-            title="Replay this answer segment"
-            className="h-8 px-3 rounded-lg border border-ink bg-ink text-white hover:bg-brand-hover text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Replay Answer</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => handleSeekRelative(5)}
-            title="Fast forward 5 seconds"
-            className="h-8 px-2 rounded-lg border border-line bg-white hover:bg-paper-muted text-xs font-mono font-medium text-ink transition-colors"
+            title="Forward 5 seconds"
+            className="h-7 px-2 rounded-md border border-line bg-white hover:border-ink text-muted hover:text-ink font-mono font-medium transition-colors"
           >
             +5s
           </button>
-
-          <button
-            type="button"
-            onClick={onNextQuestion}
-            disabled={!hasNext}
-            title="Next question"
-            className="h-8 px-2.5 rounded-lg border border-line bg-white hover:bg-paper-muted text-ink disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center text-xs font-bold"
-          >
-            <span className="hidden sm:inline mr-1">Next</span>
-            <SkipForward className="w-3.5 h-3.5" />
-          </button>
         </div>
 
-        {/* Speed & Option Controls */}
         <div className="flex items-center gap-2">
-          {/* Speed switcher */}
-          <div className="flex items-center border border-line rounded-lg p-0.5 bg-paper-muted text-xs">
+          {/* Speed Presets */}
+          <div className="flex items-center border border-line rounded-md p-0.5 bg-white text-xs">
             {[1, 1.25, 1.5, 2].map((rate) => (
               <button
                 key={rate}
                 type="button"
                 onClick={() => handleRateChange(rate)}
-                className={`px-2 py-0.5 rounded font-mono font-bold text-xs transition-colors ${
+                className={`px-1.5 py-0.5 rounded font-mono font-bold text-[11px] transition-colors ${
                   playbackRate === rate
-                    ? 'bg-ink text-white shadow-sm'
+                    ? 'bg-ink text-white'
                     : 'text-muted hover:text-ink'
                 }`}
               >
@@ -378,35 +289,31 @@ export default function YouTubePlayer({
             ))}
           </div>
 
-          {/* Loop toggle */}
+          {/* Loop Mode */}
           <button
             type="button"
             onClick={() => setLoopMode(!loopMode)}
-            title={loopMode ? 'Looping Answer ON' : 'Looping Answer OFF'}
-            className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 ${
+            title={loopMode ? 'Looping answer ON' : 'Looping answer OFF'}
+            className={`h-7 px-2 rounded-md border text-[11px] font-bold transition-all flex items-center gap-1 ${
               loopMode
                 ? 'bg-ink border-ink text-white'
-                : 'bg-white border-line text-muted hover:text-ink hover:bg-paper-muted'
+                : 'bg-white border-line text-muted hover:text-ink'
             }`}
           >
-            <Repeat className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Loop</span>
+            <Repeat className="w-3 h-3" />
+            <span>Loop</span>
           </button>
 
-          {/* Auto-Advance toggle */}
-          <button
-            type="button"
-            onClick={() => setAutoAdvance(!autoAdvance)}
-            title={autoAdvance ? 'Auto Next ON' : 'Auto Next OFF'}
-            className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 ${
-              autoAdvance
-                ? 'bg-ink border-ink text-white'
-                : 'bg-white border-line text-muted hover:text-ink hover:bg-paper-muted'
-            }`}
+          {/* External Link */}
+          <a
+            href={`${VIDEO_BASE_URL}&t=${currentQuestion.startSeconds}s`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open on YouTube at this exact timestamp"
+            className="p-1 rounded-md border border-line bg-white text-muted hover:text-ink transition-colors"
           >
-            <FastForward className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Auto-Next</span>
-          </button>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
       </div>
     </div>

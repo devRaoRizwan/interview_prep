@@ -1,34 +1,34 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   QUESTIONS_DATA, 
-  CATEGORIES, 
-  INTRO_SECTION, 
-  CONCLUSION_SECTION,
+  DAYS_ROADMAP,
   VIDEO_BASE_URL 
 } from './data/questions';
 import YouTubePlayer from './components/YouTubePlayer';
-import QuestionCard from './components/QuestionCard';
 import { 
+  Check, 
+  Lock, 
   ChevronLeft, 
   ChevronRight, 
   RotateCcw, 
-  Search, 
-  X, 
-  Play, 
-  CheckCircle2, 
+  BookOpen, 
+  ExternalLink, 
+  FileText, 
+  Sparkles,
   Flame,
-  BookOpen,
-  Filter,
-  Check
+  Unlock,
+  CheckCircle2,
+  Clock,
+  Layers
 } from 'lucide-react';
 
-const STORAGE_KEY_COMPLETED = 'django_prep_completed_v2';
-const STORAGE_KEY_NOTES = 'django_prep_notes_v2';
-const STORAGE_KEY_LAST_ID = 'django_prep_last_question_id_v2';
-const STORAGE_KEY_AUTO_ADVANCE = 'django_prep_auto_advance_v2';
+const STORAGE_KEY_COMPLETED = 'django_10day_completed_v3';
+const STORAGE_KEY_NOTES = 'django_10day_notes_v3';
+const STORAGE_KEY_LAST_ID = 'django_10day_last_id_v3';
+const STORAGE_KEY_STRICT_LOCK = 'django_10day_strict_lock_v3';
 
 export default function App() {
-  // Completed map
+  // Completed questions map { [id]: boolean }
   const [completedMap, setCompletedMap] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_COMPLETED);
@@ -38,7 +38,7 @@ export default function App() {
     }
   });
 
-  // Notes map
+  // Notes map { [id]: string }
   const [notesMap, setNotesMap] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_NOTES);
@@ -48,36 +48,34 @@ export default function App() {
     }
   });
 
-  // Active question
-  const [currentQuestion, setCurrentQuestion] = useState(() => {
+  // Strict lock progression (enabled by default as requested: lock everything, only one video unlocked)
+  const [strictLock, setStrictLock] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_STRICT_LOCK);
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Active question ID
+  const [activeQuestionId, setActiveQuestionId] = useState(() => {
     try {
       const savedId = localStorage.getItem(STORAGE_KEY_LAST_ID);
-      if (savedId) {
-        const found = QUESTIONS_DATA.find((q) => q.id === Number(savedId));
-        if (found) return found;
+      if (savedId && QUESTIONS_DATA.some((q) => q.id === Number(savedId))) {
+        return Number(savedId);
       }
     } catch {
       // ignore
     }
-    return QUESTIONS_DATA[0];
+    return 1;
   });
 
-  // Player preferences
-  const [autoAdvance, setAutoAdvance] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY_AUTO_ADVANCE) === 'true';
-    } catch {
-      return false;
-    }
-  });
   const [loopMode, setLoopMode] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [currentNote, setCurrentNote] = useState('');
 
-  // Filters & Search
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Persist state
+  // Persist states
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify(completedMap));
@@ -96,181 +94,193 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_LAST_ID, currentQuestion.id.toString());
+      localStorage.setItem(STORAGE_KEY_LAST_ID, activeQuestionId.toString());
     } catch (e) {
       console.warn(e);
     }
-  }, [currentQuestion]);
+  }, [activeQuestionId]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_AUTO_ADVANCE, autoAdvance.toString());
+      localStorage.setItem(STORAGE_KEY_STRICT_LOCK, strictLock.toString());
     } catch (e) {
       console.warn(e);
     }
-  }, [autoAdvance]);
+  }, [strictLock]);
 
-  // Toggle completed
-  const handleToggleCompleted = useCallback((id) => {
+  // Sync current note when question changes
+  useEffect(() => {
+    setCurrentNote(notesMap[activeQuestionId] || '');
+  }, [activeQuestionId, notesMap]);
+
+  // Is a specific question unlocked?
+  const isQuestionUnlocked = useCallback((id) => {
+    if (!strictLock) return true;
+    if (id === 1) return true;
+    // Unlocked if already completed OR if the previous question is completed
+    return !!completedMap[id] || !!completedMap[id - 1];
+  }, [strictLock, completedMap]);
+
+  // Active Question Object
+  const currentQuestion = useMemo(() => {
+    return QUESTIONS_DATA.find((q) => q.id === activeQuestionId) || QUESTIONS_DATA[0];
+  }, [activeQuestionId]);
+
+  // Current Day info
+  const currentDayInfo = useMemo(() => {
+    return DAYS_ROADMAP.find((d) => d.day === currentQuestion.day) || DAYS_ROADMAP[0];
+  }, [currentQuestion.day]);
+
+  // Questions in current day
+  const questionsInCurrentDay = useMemo(() => {
+    return QUESTIONS_DATA.filter((q) => q.day === currentQuestion.day);
+  }, [currentQuestion.day]);
+
+  // Toggle completion
+  const handleToggleComplete = useCallback((id) => {
+    const isNowDone = !completedMap[id];
     setCompletedMap((prev) => ({
       ...prev,
-      [id]: !prev[id]
+      [id]: isNowDone
     }));
-  }, []);
 
-  // Save personal note
-  const handleSaveNote = useCallback((id, noteText) => {
-    setNotesMap((prev) => ({
-      ...prev,
-      [id]: noteText
-    }));
-  }, []);
+    // If marked done, automatically unlock and advance to next question if on current
+    if (isNowDone && id < QUESTIONS_DATA.length) {
+      // Optional subtle delay to show celebration before advancing
+      setTimeout(() => {
+        setActiveQuestionId(id + 1);
+      }, 400);
+    }
+  }, [completedMap]);
 
-  // Reset progress
-  const handleResetProgress = () => {
-    if (window.confirm('Reset all completed checkboxes?')) {
-      setCompletedMap({});
+  // Save note
+  const handleSaveNote = () => {
+    if (currentNote !== (notesMap[activeQuestionId] || '')) {
+      setNotesMap((prev) => ({
+        ...prev,
+        [activeQuestionId]: currentNote
+      }));
     }
   };
 
-  // Filter questions
-  const filteredQuestions = useMemo(() => {
-    return QUESTIONS_DATA.filter((q) => {
-      if (activeCategory !== 'all' && q.partId !== activeCategory) {
-        return false;
-      }
-
-      const isDone = !!completedMap[q.id];
-      if (statusFilter === 'completed' && !isDone) return false;
-      if (statusFilter === 'pending' && isDone) return false;
-
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = q.title.toLowerCase().includes(query);
-        const matchesTip = (q.tip || '').toLowerCase().includes(query);
-        const matchesTags = q.tags.some((tag) => tag.toLowerCase().includes(query));
-        return matchesTitle || matchesTip || matchesTags;
-      }
-
-      return true;
-    });
-  }, [activeCategory, statusFilter, searchQuery, completedMap]);
-
-  // Current Question Index Navigation
-  const currentIndex = QUESTIONS_DATA.findIndex((q) => q.id === currentQuestion.id);
-  const hasPrevious = currentIndex > 0;
-  const hasNext = currentIndex < QUESTIONS_DATA.length - 1;
-
-  const handlePreviousQuestion = useCallback(() => {
-    if (hasPrevious) {
-      setCurrentQuestion(QUESTIONS_DATA[currentIndex - 1]);
+  // Reset progress
+  const handleReset = () => {
+    if (window.confirm('Reset all completed progress and lock future questions again?')) {
+      setCompletedMap({});
+      setActiveQuestionId(1);
     }
-  }, [hasPrevious, currentIndex]);
+  };
 
-  const handleNextQuestion = useCallback(() => {
-    if (hasNext) {
-      setCurrentQuestion(QUESTIONS_DATA[currentIndex + 1]);
-    }
-  }, [hasNext, currentIndex]);
-
+  // Overall statistics
   const completedCount = Object.values(completedMap).filter(Boolean).length;
   const totalCount = QUESTIONS_DATA.length;
-  const percent = Math.round((completedCount / totalCount) * 100);
+  const overallPercent = Math.round((completedCount / totalCount) * 100);
 
-  // Active Category Completion Stats
-  const activeQuestionsInCat = useMemo(() => {
-    if (activeCategory === 'all') return QUESTIONS_DATA;
-    return QUESTIONS_DATA.filter((q) => q.partId === activeCategory);
-  }, [activeCategory]);
+  // Day statistics
+  const completedInCurrentDay = questionsInCurrentDay.filter((q) => !!completedMap[q.id]).length;
+  const dayPercent = Math.round((completedInCurrentDay / questionsInCurrentDay.length) * 100);
 
-  const completedInCat = useMemo(() => {
-    return activeQuestionsInCat.filter((q) => !!completedMap[q.id]).length;
-  }, [activeQuestionsInCat, completedMap]);
+  const isCurrentCompleted = !!completedMap[currentQuestion.id];
+  const hasPrevious = currentQuestion.id > 1;
+  const hasNext = currentQuestion.id < QUESTIONS_DATA.length;
+  const isNextUnlocked = hasNext && isQuestionUnlocked(currentQuestion.id + 1);
 
-  const catPercent = Math.round((completedInCat / (activeQuestionsInCat.length || 1)) * 100);
-
-  const activeCategoryObject = CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
+  // Jump to specific day (picks first unlocked question in that day)
+  const handleSelectDay = (dayNum) => {
+    const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === dayNum);
+    // Find first unfinished or first unlocked question in that day
+    const firstUnfinished = dayQuestions.find((q) => isQuestionUnlocked(q.id) && !completedMap[q.id]);
+    const target = firstUnfinished || dayQuestions[0];
+    if (isQuestionUnlocked(target.id) || !strictLock) {
+      setActiveQuestionId(target.id);
+    } else {
+      // If locked, jump to highest available
+      setActiveQuestionId(target.id);
+    }
+  };
 
   return (
-    <div className="w-full min-h-screen bg-page flex flex-col lg:grid lg:grid-cols-[284px_minmax(0,1fr)] max-w-[1600px] mx-auto text-ink">
+    <div className="w-full min-h-screen bg-page flex flex-col lg:grid lg:grid-cols-[280px_minmax(0,1fr)] max-w-[1600px] mx-auto text-ink font-sans">
       
-      {/* SIDEBAR (comback2026 style) */}
-      <aside className="border-r border-line bg-sidebar p-5 sm:p-6 lg:h-screen lg:sticky lg:top-0 lg:overflow-y-auto flex flex-col justify-between">
-        <div className="space-y-5">
+      {/* SIDEBAR: 10-DAY ROADMAP (comback2026 style) */}
+      <aside className="border-r border-line bg-sidebar p-5 lg:h-screen lg:sticky lg:top-0 lg:overflow-y-auto flex flex-col justify-between">
+        <div className="space-y-4">
           {/* Brand */}
           <div className="flex items-center gap-3 px-1">
-            <div className="w-10 h-10 rounded-xl bg-ink text-white font-heading font-extrabold text-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-ink text-white font-heading font-extrabold text-base flex items-center justify-center shadow-subtle">
               DJ
             </div>
             <div>
-              <strong className="block font-heading font-extrabold text-base tracking-tight leading-tight text-ink">
+              <strong className="block font-heading font-extrabold text-sm tracking-tight text-ink">
                 Django Journey
               </strong>
-              <small className="block text-muted text-[11px] mt-0.5">
-                54 Interview Questions
+              <small className="block text-muted text-[11px]">
+                10-Day Plan • 5 Questions/Day
               </small>
             </div>
           </div>
 
-          {/* Journey Card (Roadmap Overview) */}
-          <section className="p-4 rounded-[14px] border border-line bg-white shadow-subtle">
+          {/* Roadmap Progress Card (comback2026 journey-card style) */}
+          <section className="p-3.5 rounded-xl border border-line bg-white shadow-subtle">
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
-              YOUR ROADMAP
+              YOUR 10-DAY ROADMAP
             </p>
-            <strong className="block my-2 font-heading font-bold text-sm text-ink">
-              Master 54 Questions
+            <strong className="block my-1.5 font-heading font-bold text-xs sm:text-sm text-ink">
+              {completedCount} of {totalCount} Questions Mastered
             </strong>
-            <div className="w-full h-1.5 bg-line rounded-full overflow-hidden mb-2">
+            <div className="w-full h-1.5 bg-line rounded-full overflow-hidden mb-1.5">
               <div 
-                className="h-full bg-ink rounded-full transition-all duration-300" 
-                style={{ width: `${percent}%` }}
+                className="h-full bg-ink rounded-full transition-all duration-300"
+                style={{ width: `${overallPercent}%` }}
               />
             </div>
-            <small className="text-muted text-[11px] font-medium block">
-              {completedCount} of {totalCount} completed ({percent}%)
-            </small>
+            <div className="flex items-center justify-between text-[11px] text-muted">
+              <span>{overallPercent}% completed</span>
+              <span className="font-semibold text-ink">{totalCount - completedCount} left</span>
+            </div>
           </section>
 
-          {/* Parts / Chapters Navigation (week-list style) */}
-          <nav className="space-y-1.5" aria-label="Parts list">
-            {CATEGORIES.map((cat, idx) => {
-              const countInPart = cat.id === 'all' 
-                ? QUESTIONS_DATA.length 
-                : QUESTIONS_DATA.filter((q) => q.partId === cat.id).length;
-              const doneInPart = cat.id === 'all'
-                ? completedCount
-                : QUESTIONS_DATA.filter((q) => q.partId === cat.id && !!completedMap[q.id]).length;
-
-              const isActive = activeCategory === cat.id;
+          {/* 10 Days List */}
+          <nav className="space-y-1.5" aria-label="10 Day Schedule">
+            {DAYS_ROADMAP.map((d) => {
+              const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
+              const dayDoneCount = dayQuestions.filter((q) => !!completedMap[q.id]).length;
+              const isDayActive = currentQuestion.day === d.day;
+              const isDayComplete = dayDoneCount === dayQuestions.length;
+              const isDayUnlocked = isQuestionUnlocked(dayQuestions[0].id);
 
               return (
                 <button
-                  key={cat.id}
+                  key={d.day}
                   type="button"
-                  onClick={() => setActiveCategory(cat.id)}
+                  onClick={() => handleSelectDay(d.day)}
                   className={`w-full text-left p-2.5 rounded-xl border flex items-center gap-2.5 transition-all ${
-                    isActive
+                    isDayActive
                       ? 'border-ink bg-white shadow-subtle ring-1 ring-ink/20'
                       : 'border-line bg-white hover:border-line-strong hover:bg-paper-muted'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-heading font-bold text-[11px] ${
-                    isActive ? 'bg-ink text-white' : 'bg-paper-muted text-muted'
+                  <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center font-heading font-bold text-[11px] ${
+                    isDayActive 
+                      ? 'bg-ink text-white' 
+                      : isDayComplete 
+                      ? 'bg-paper-muted text-ink' 
+                      : 'bg-paper-muted text-muted'
                   }`}>
-                    {idx === 0 ? 'ALL' : `P${idx}`}
+                    {isDayComplete ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : `D${d.day}`}
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <strong className="block text-xs font-bold font-heading truncate text-ink">
-                      {cat.label}
+                      Day {d.day}: {d.title}
                     </strong>
-                    <small className="block text-[10px] text-muted mt-0.5">
-                      {doneInPart} / {countInPart} completed
+                    <small className="block text-[10px] text-muted truncate mt-0.5">
+                      {dayDoneCount}/{dayQuestions.length} questions
                     </small>
                   </div>
 
-                  {doneInPart === countInPart && countInPart > 0 && (
-                    <Check className="w-3.5 h-3.5 text-ink flex-shrink-0 stroke-[2.5]" />
+                  {!isDayUnlocked && (
+                    <Lock className="w-3.5 h-3.5 text-muted/60 flex-shrink-0" />
                   )}
                 </button>
               );
@@ -278,271 +288,360 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Sidebar Footer Note */}
-        <p className="mt-8 pt-4 border-t border-line text-muted text-[11px] leading-relaxed">
-          No locked questions. Pick up wherever you are.
-        </p>
+        {/* Sidebar Controls */}
+        <div className="mt-6 pt-3 border-t border-line space-y-2">
+          {/* Lock mode toggle */}
+          <button
+            type="button"
+            onClick={() => setStrictLock(!strictLock)}
+            className="w-full text-left px-2 py-1.5 rounded-lg border border-line bg-white text-[11px] text-muted hover:text-ink hover:border-line-strong flex items-center justify-between transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              {strictLock ? <Lock className="w-3 h-3 text-ink" /> : <Unlock className="w-3 h-3 text-emerald-600" />}
+              <span>Progression Lock</span>
+            </span>
+            <span className={`font-bold font-mono text-[10px] px-1.5 py-0.2 rounded ${strictLock ? 'bg-paper-muted text-ink' : 'bg-emerald-50 text-emerald-600'}`}>
+              {strictLock ? 'ON' : 'OFF'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleReset}
+            className="w-full text-left px-2 py-1 text-[11px] text-muted hover:text-red-600 transition-colors flex items-center gap-1.5"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Reset all progress</span>
+          </button>
+        </div>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
+      {/* MAIN FOCUSED CONTENT AREA (ONE VIDEO AT A TIME) */}
       <main className="min-w-0 flex flex-col bg-page">
         
-        {/* Topbar (comback2026 style) */}
-        <header className="p-6 sm:px-10 border-b border-line bg-white flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
-              A FOCUSED STUDY SESSION
-            </p>
-            <h1 className="m-0 mt-1 font-heading font-extrabold text-2xl sm:text-3xl text-ink tracking-tight">
-              {activeCategoryObject.label}
-            </h1>
-            <p className="m-0 mt-1 text-xs text-muted">
-              Select questions to play only that exact answer segment. Check off as you master each topic.
-            </p>
+        {/* Topbar: 10 Days Stepper (comback2026 date-chips style) */}
+        <header className="p-4 sm:px-8 border-b border-line bg-white sticky top-0 z-20">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
+                10-DAY PLAYLIST • PACE: 5 QUESTIONS / DAY
+              </p>
+              <h1 className="m-0 mt-0.5 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
+                Day {currentDayInfo.day}: {currentDayInfo.title}
+              </h1>
+            </div>
+
+            {/* Overall Day Stats pill */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-line bg-paper-muted text-xs">
+              <span className="font-bold text-ink">Day Progress:</span>
+              <span className="font-mono text-muted">{completedInCurrentDay}/{questionsInCurrentDay.length} done ({dayPercent}%)</span>
+            </div>
           </div>
 
-          {/* Navigation Controls */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePreviousQuestion}
-              disabled={!hasPrevious}
-              title="Previous question"
-              className="w-9 h-9 border border-line-strong rounded-lg bg-white text-ink hover:bg-paper-muted disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all shadow-subtle"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+          {/* 10-Days Quick Chips (styled like date-chips in comback2026) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {DAYS_ROADMAP.map((d) => {
+              const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
+              const done = dayQuestions.filter((q) => !!completedMap[q.id]).length;
+              const isSelected = currentQuestion.day === d.day;
+              const isComplete = done === dayQuestions.length;
+              const isUnlocked = isQuestionUnlocked(dayQuestions[0].id);
 
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById('player-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="h-9 px-3.5 border border-ink bg-ink text-white rounded-lg text-xs font-bold hover:bg-brand-hover transition-all flex items-center gap-1.5 shadow-subtle"
-            >
-              <Play className="w-3 h-3 fill-current" />
-              <span>Playing: Q#{currentQuestion.questionNumber}</span>
-            </button>
+              return (
+                <button
+                  key={d.day}
+                  type="button"
+                  onClick={() => handleSelectDay(d.day)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'border-ink bg-ink text-white shadow-subtle'
+                      : isComplete
+                      ? 'border-line-strong bg-white text-ink hover:border-ink'
+                      : !isUnlocked
+                      ? 'border-line bg-paper-muted text-muted/60 opacity-60'
+                      : 'border-line bg-white text-muted hover:border-line-strong hover:text-ink'
+                  }`}
+                >
+                  <span>Day {d.day}</span>
+                  {isComplete ? (
+                    <Check className={`w-3 h-3 ${isSelected ? 'text-white' : 'text-ink'}`} />
+                  ) : !isUnlocked ? (
+                    <Lock className="w-2.5 h-2.5 text-muted/50" />
+                  ) : (
+                    <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-muted'}`}>
+                      {done}/{dayQuestions.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-            <button
-              type="button"
-              onClick={handleNextQuestion}
-              disabled={!hasNext}
-              title="Next question"
-              className="w-9 h-9 border border-line-strong rounded-lg bg-white text-ink hover:bg-paper-muted disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center transition-all shadow-subtle"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+          {/* Questions Stepper in Current Day */}
+          <div className="mt-3 pt-3 border-t border-line flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex-shrink-0">
+              Questions:
+            </span>
+            <div className="flex items-center gap-1.5">
+              {questionsInCurrentDay.map((q, idx) => {
+                const isSelected = currentQuestion.id === q.id;
+                const isDone = !!completedMap[q.id];
+                const isUnlocked = isQuestionUnlocked(q.id);
+
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    disabled={!isUnlocked}
+                    onClick={() => setActiveQuestionId(q.id)}
+                    className={`h-7 px-2.5 rounded-md border text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'border-ink bg-ink text-white shadow-subtle'
+                        : isDone
+                        ? 'border-line bg-paper-muted text-ink hover:border-line-strong'
+                        : !isUnlocked
+                        ? 'border-line bg-paper-muted text-muted/40 cursor-not-allowed'
+                        : 'border-line bg-white text-muted hover:border-ink hover:text-ink'
+                    }`}
+                  >
+                    {isDone ? (
+                      <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-ink'}`} />
+                    ) : !isUnlocked ? (
+                      <Lock className="w-2.5 h-2.5 text-muted/40" />
+                    ) : (
+                      <span>Q{idx + 1}</span>
+                    )}
+                    <span className="hidden md:inline text-[11px]">Q#{q.id}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </header>
 
-        {/* Dashboard Stats (comback2026 stat-card style) */}
-        <section className="p-6 sm:px-10 pb-2 grid grid-cols-2 md:grid-cols-4 gap-3 bg-page">
-          {/* Stat 1: Total Progress */}
-          <div className="p-4 border border-line rounded-[13px] bg-white shadow-subtle text-left transition-all hover:border-line-strong">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted m-0 mb-2">
-              TOTAL PROGRESS
-            </p>
-            <div className="font-heading font-extrabold text-2xl text-ink mb-2">
-              {percent}%
+        {/* FOCUSED SINGLE VIDEO STATION */}
+        <div className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+          
+          {/* Main Question Card (Only ONE Question shown) */}
+          <section className="border border-line rounded-2xl bg-white shadow-card overflow-hidden">
+            
+            {/* Question Heading */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-line">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
+                  DAY {currentQuestion.day} • QUESTION {currentQuestion.dayIndex} OF {questionsInCurrentDay.length} • Q#{currentQuestion.id}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2 py-0.5 rounded border border-line">
+                    <Clock className="w-3 h-3 text-muted" />
+                    {currentQuestion.startTime} — {currentQuestion.endTime} ({currentQuestion.endSeconds - currentQuestion.startSeconds}s)
+                  </span>
+
+                  {isCurrentCompleted ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink bg-paper-muted px-2 py-0.5 rounded border border-line">
+                      <Check className="w-3 h-3 stroke-[2.5]" />
+                      Mastered
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted px-2 py-0.5 rounded border border-line">
+                      Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <h2 className="m-0 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight leading-snug">
+                {currentQuestion.title}
+              </h2>
             </div>
-            <div className="w-full h-1 bg-line rounded-full overflow-hidden mb-2">
-              <div 
-                className="h-full bg-ink rounded-full transition-all" 
-                style={{ width: `${percent}%` }}
+
+            {/* Embedded Video: ONLY plays this particular question part */}
+            <div className="p-4 sm:p-6 pb-2">
+              <YouTubePlayer
+                currentQuestion={currentQuestion}
+                loopMode={loopMode}
+                setLoopMode={setLoopMode}
+                onSegmentEnd={() => {
+                  // Prompt user or highlight completion button when video finishes
+                }}
               />
             </div>
-            <small className="text-muted text-[11px] block">
-              {completedCount} of {totalCount} questions
-            </small>
-          </div>
 
-          {/* Stat 2: Active Category */}
-          <div className="p-4 border border-line rounded-[13px] bg-white shadow-subtle text-left transition-all hover:border-line-strong">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted m-0 mb-2">
-              THIS SECTION
-            </p>
-            <div className="font-heading font-extrabold text-2xl text-ink mb-2">
-              {catPercent}%
+            {/* PRIMARY COMPLETION CHECKBOX BUTTON */}
+            <div className="px-4 sm:px-6 py-4 bg-paper-muted/50 border-t border-b border-line flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => handleToggleComplete(currentQuestion.id)}
+                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl border text-sm font-bold font-heading transition-all flex items-center justify-center gap-2 shadow-subtle ${
+                  isCurrentCompleted
+                    ? 'bg-ink border-ink text-white'
+                    : 'bg-white border-line-strong hover:border-ink hover:bg-paper-muted text-ink'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                  isCurrentCompleted ? 'border-white bg-white text-ink' : 'border-line-strong bg-paper-muted'
+                }`}>
+                  {isCurrentCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </div>
+                <span>
+                  {isCurrentCompleted 
+                    ? '✓ Mastered! Click to Mark Incomplete' 
+                    : 'Mark as Done & Unlock Next Question →'}
+                </span>
+              </button>
+
+              <div className="text-xs text-muted">
+                {isNextUnlocked && hasNext && (
+                  <span className="text-ink font-medium">Question #{currentQuestion.id + 1} unlocked</span>
+                )}
+              </div>
             </div>
-            <div className="w-full h-1 bg-line rounded-full overflow-hidden mb-2">
-              <div 
-                className="h-full bg-ink rounded-full transition-all" 
-                style={{ width: `${catPercent}%` }}
-              />
-            </div>
-            <small className="text-muted text-[11px] block">
-              {completedInCat} of {activeQuestionsInCat.length} completed
-            </small>
-          </div>
 
-          {/* Stat 3: Mastered */}
-          <div className="p-4 border border-line rounded-[13px] bg-white shadow-subtle text-left transition-all hover:border-line-strong">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted m-0 mb-2">
-              MASTERED
-            </p>
-            <div className="font-heading font-extrabold text-2xl text-ink mb-2">
-              {completedCount}
-            </div>
-            <small className="text-muted text-[11px] block">
-              questions done 🔥
-            </small>
-          </div>
+            {/* CONCEPT SUMMARY & QUICK RECALL */}
+            <div className="p-5 sm:p-6 space-y-4">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1.5">
+                  CORE INTERVIEW TAKEAWAY
+                </p>
+                <p className="text-sm text-ink/90 leading-relaxed font-sans">
+                  {currentQuestion.summary}
+                </p>
+              </div>
 
-          {/* Stat 4: Remaining */}
-          <div className="p-4 border border-line rounded-[13px] bg-white shadow-subtle text-left transition-all hover:border-line-strong">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted m-0 mb-2">
-              TO REVIEW
-            </p>
-            <div className="font-heading font-extrabold text-2xl text-ink mb-2">
-              {totalCount - completedCount}
-            </div>
-            <small className="text-muted text-[11px] block">
-              questions remaining
-            </small>
-          </div>
-        </section>
-
-        {/* ACTIVE VIDEO PLAYER SECTION (Plays ONLY that particular question part) */}
-        <section id="player-section" className="px-6 sm:px-10 pt-4 pb-2">
-          <YouTubePlayer
-            currentQuestion={currentQuestion}
-            onNextQuestion={handleNextQuestion}
-            onPreviousQuestion={handlePreviousQuestion}
-            hasPrevious={hasPrevious}
-            hasNext={hasNext}
-            isCompleted={!!completedMap[currentQuestion.id]}
-            onToggleCompleted={handleToggleCompleted}
-            autoAdvance={autoAdvance}
-            setAutoAdvance={setAutoAdvance}
-            loopMode={loopMode}
-            setLoopMode={setLoopMode}
-          />
-        </section>
-
-        {/* SECTION HEADING & CONTROLS */}
-        <section className="px-6 sm:px-10 pt-8 pb-3 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
-              QUESTION CHECKLIST
-            </p>
-            <h2 className="m-0 mt-1 font-heading font-extrabold text-xl text-ink tracking-tight">
-              Small steps, one question at a time
-            </h2>
-          </div>
-
-          {/* Search & Status Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search question, keyword..."
-                className="pl-8 pr-7 py-1.5 text-xs bg-white border border-line rounded-lg text-ink focus:outline-none focus:border-ink transition-colors w-48 sm:w-60 shadow-subtle placeholder:text-muted"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+              {currentQuestion.tip && (
+                <div className="p-3 rounded-xl border border-line bg-paper-muted text-xs text-ink flex items-start gap-2.5">
+                  <span className="font-bold text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-white border border-line text-ink flex-shrink-0">
+                    QUICK RECALL
+                  </span>
+                  <span className="font-mono text-xs text-ink">{currentQuestion.tip}</span>
+                </div>
               )}
+
+              {/* CURATED ARTICLES & IN-DEPTH STUDY LINKS */}
+              <div className="pt-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">
+                  IN-DEPTH READING & OFFICIAL DOCUMENTATION
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {currentQuestion.articles.map((art, idx) => (
+                    <a
+                      key={idx}
+                      href={art.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-xl border border-line bg-white hover:border-ink hover:bg-paper-muted transition-all flex items-start justify-between gap-3 group shadow-subtle"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                          {art.source}
+                        </span>
+                        <strong className="text-xs font-bold text-ink group-hover:text-ink block mt-0.5 line-clamp-1">
+                          {art.title}
+                        </strong>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted group-hover:text-ink flex-shrink-0 mt-0.5" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {/* PERSONAL STUDY NOTES */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
+                    YOUR INTERVIEW NOTES
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowNotes(!showNotes)}
+                    className="text-xs text-muted hover:text-ink font-medium"
+                  >
+                    {showNotes ? 'Collapse' : currentNote ? 'Edit Notes' : '+ Add Note'}
+                  </button>
+                </div>
+
+                {showNotes ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={currentNote}
+                      onChange={(e) => setCurrentNote(e.target.value)}
+                      onBlur={handleSaveNote}
+                      placeholder="Write your explanation, syntax reminders, or interview answers here..."
+                      rows={3}
+                      className="w-full text-xs font-sans bg-paper-muted border border-line rounded-xl p-3 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSaveNote}
+                        className="px-3 py-1 rounded-md border border-line bg-white text-xs font-bold hover:bg-paper-muted text-ink"
+                      >
+                        Save Note
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  currentNote && (
+                    <p 
+                      onClick={() => setShowNotes(true)}
+                      className="p-2.5 rounded-lg border border-line bg-paper-muted text-xs text-ink/80 italic cursor-pointer hover:border-line-strong"
+                    >
+                      "{currentNote}"
+                    </p>
+                  )
+                )}
+              </div>
             </div>
 
-            {/* Filter buttons */}
-            <div className="flex items-center border border-line rounded-lg p-0.5 bg-paper-muted text-xs">
+            {/* PREV / NEXT NAVIGATION FOOTER */}
+            <div className="px-5 sm:px-6 py-4 bg-paper-muted border-t border-line flex items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1 rounded font-bold transition-colors ${
-                  statusFilter === 'all'
-                    ? 'bg-ink text-white shadow-subtle'
-                    : 'text-muted hover:text-ink'
-                }`}
+                onClick={() => hasPrevious && setActiveQuestionId(currentQuestion.id - 1)}
+                disabled={!hasPrevious}
+                className="px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-paper-muted text-ink disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1.5 text-xs font-bold shadow-subtle"
               >
-                All ({filteredQuestions.length})
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous Question</span>
               </button>
+
+              <span className="text-xs text-muted font-medium">
+                Question {currentQuestion.id} of {totalCount}
+              </span>
+
               <button
                 type="button"
-                onClick={() => setStatusFilter('pending')}
-                className={`px-3 py-1 rounded font-bold transition-colors ${
-                  statusFilter === 'pending'
-                    ? 'bg-ink text-white shadow-subtle'
-                    : 'text-muted hover:text-ink'
-                }`}
+                onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
+                disabled={!hasNext || !isNextUnlocked}
+                className="px-3.5 py-2 rounded-lg border border-ink bg-ink text-white hover:bg-brand-hover disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1.5 text-xs font-bold shadow-subtle"
               >
-                To Do
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('completed')}
-                className={`px-3 py-1 rounded font-bold transition-colors ${
-                  statusFilter === 'completed'
-                    ? 'bg-ink text-white shadow-subtle'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Done
+                <span>Next Question</span>
+                {!isNextUnlocked && hasNext ? (
+                  <Lock className="w-3.5 h-3.5 text-white/70" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
               </button>
             </div>
+          </section>
+
+          {/* Motivational Tip Box */}
+          <div className="p-4 rounded-xl border border-line bg-white text-xs text-muted flex items-center justify-between gap-3 shadow-subtle">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-ink flex-shrink-0" />
+              <span>
+                <strong>Daily Habit:</strong> Master 5 questions each day. You'll finish all 54 questions in exactly 10 days!
+              </span>
+            </div>
+            <span className="text-ink font-bold font-mono">Day {currentQuestion.day}/10</span>
           </div>
-        </section>
 
-        {/* QUESTIONS GRID (course-task style) */}
-        <section className="px-6 sm:px-10 pb-8 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredQuestions.length === 0 ? (
-            <div className="col-span-full py-12 text-center border border-line rounded-xl bg-white p-8">
-              <p className="text-sm font-bold text-ink">No questions found</p>
-              <p className="text-xs text-muted mt-1">Try clearing your search query or switching filters.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setStatusFilter('all');
-                  setActiveCategory('all');
-                }}
-                className="mt-3 px-3 py-1.5 border border-line rounded-lg text-xs font-bold text-ink hover:bg-paper-muted transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
-          ) : (
-            filteredQuestions.map((q) => (
-              <QuestionCard
-                key={q.id}
-                question={q}
-                isActive={currentQuestion.id === q.id}
-                isCompleted={!!completedMap[q.id]}
-                onSelect={(selected) => {
-                  setCurrentQuestion(selected);
-                  const el = document.getElementById('player-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                onToggleCompleted={handleToggleCompleted}
-                note={notesMap[q.id]}
-                onSaveNote={handleSaveNote}
-              />
-            ))
-          )}
-        </section>
+        </div>
 
-        {/* PAGE FOOTER (comback2026 style) */}
-        <footer className="mt-auto px-6 sm:px-10 py-5 border-t border-line bg-white flex flex-wrap items-center justify-between gap-4 text-xs text-muted">
-          <span>Progress is stored in this browser only.</span>
-          <button
-            type="button"
-            onClick={handleResetProgress}
-            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-red-600 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset progress</span>
-          </button>
+        {/* Minimal Footer */}
+        <footer className="mt-auto px-6 py-4 border-t border-line bg-white text-center text-xs text-muted">
+          Progress and notes are saved automatically in your browser's local storage.
         </footer>
 
       </main>

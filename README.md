@@ -1,35 +1,41 @@
-# Django Interview Prep - Precision Timestamp Study Player
+# Django Interview Prep - 10-Day Focused Study Journey
 
-A minimal, high-efficiency frontend built with **Vite, React, and Tailwind CSS** for studying the 54 Django Interview Questions from [YouTube](https://www.youtube.com/watch?v=hMwGWqyIKEs).
+A clean, distraction-free web app for mastering 54 core Django interview questions at a disciplined pace of **5 questions per day** across a **10-day roadmap**.
 
-## Features
+Inspired by [comback2026.vercel.app](https://comback2026.vercel.app/).
 
-- 🎯 **Precision Timestamp Playback**: Plays **only** the exact question/answer segment (from its start timestamp to its end timestamp) and stops automatically when the answer ends.
-- ✅ **Progress Tracking Checkbox**: Interactive checkbox for every question to mark it completed. Stored locally in `localStorage`.
-- 🔁 **Segment Loop & Auto-Next**:
-  - **Loop Mode**: Continuously replay the same question answer until mastered.
-  - **Auto-Next**: Automatically advance to the next question when the current answer finishes.
-- ⚡ **Speed Controls**: Quick toggle between 1x, 1.25x, 1.5x, and 2x playback speed.
-- 🔍 **Live Instant Search**: Filter questions by keywords, concepts, or tags (e.g. `ORM`, `CSRF`, `Signals`, `Middleware`, `select_related`).
-- 📂 **Categorized by Sections**:
-  - **Part 1**: QuerySet & Command Based (11 questions)
-  - **Part 2**: Mostly Asked Questions (16 questions)
-  - **Part 3**: Common Questions (16 questions)
-  - **Part 4**: Advanced & Rarely Asked (11 questions)
-- 📝 **Per-Question Note Taking**: Expand any question card to jot down personal notes and answer summaries (persisted in `localStorage`).
-- ⌨️ **Keyboard Shortcuts**:
-  - `C`: Toggle completed for the active question
-  - `→` / `N`: Next question
-  - `←` / `P`: Previous question
-  - `?`: Shortcuts help
+## Key Features
+
+- 🎯 **One Video at a Time**: No overwhelming feeds. Focus on one question, master it, and unlock the next.
+- 🔒 **Progression Lock**:
+  - Questions are locked until the preceding question is marked as completed.
+  - Keeps you disciplined and focused on small, daily milestones.
+  - Can toggle "Progression Lock" ON/OFF anytime in the sidebar.
+- ⏱️ **Precision Segment Playback**:
+  - Automatically plays **only that question's exact answer** (starts at question timestamp and stops automatically at the end of the answer).
+  - Replay answer, $\pm5\text{s}$ scrub controls, speed toggles (1x, 1.25x, 1.5x, 2x), and loop answer mode.
+- 📚 **In-Depth Reading & Articles**:
+  - Every single question includes curated direct links to official Django documentation and Real Python guides.
+- 📅 **10-Day Structured Roadmap**:
+  - **Day 1**: CLI & Environment Setup (Q1 – Q5)
+  - **Day 2**: QuerySet & Basic CRUD (Q6 – Q10)
+  - **Day 3**: Architecture & Request Flow (Q11 – Q15)
+  - **Day 4**: ORM, Migrations & Server (Q16 – Q20)
+  - **Day 5**: Security & Query Optimization (Q21 – Q25)
+  - **Day 6**: Static Files & Comparisons (Q26 – Q30)
+  - **Day 7**: Views, Auth & Q Objects (Q31 – Q35)
+  - **Day 8**: URLs, DRF, Middleware & Sessions (Q36 – Q40)
+  - **Day 9**: Signals, Context & Exceptions (Q41 – Q45)
+  - **Day 10**: Advanced Models, Views & Caching (Q46 – Q54)
+- 📝 **Personal Interview Notes**:
+  - Scratchpad for each question stored automatically in `localStorage`.
+- ✅ **One-Click Checkbox**:
+  - Prominent "Mark as Done & Unlock Next Question" button with immediate unlock feedback.
 
 ## Running Locally
 
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Run the development server
+cd /home/rao/Desktop/PREP
 npm run dev
 ```
 
@@ -37,16 +43,9 @@ Open `http://localhost:5173` in your browser.
 
 ## Deploying to Vercel
 
-### Option 1: Via Vercel Web Dashboard (Recommended)
-1. Push this repository to GitHub or GitLab.
-2. Go to [vercel.com/new](https://vercel.com/new).
-3. Import the repository.
-4. Framework Preset will automatically detect **Vite**.
-5. Click **Deploy**!
-
-### Option 2: Via Vercel CLI
 ```bash
-npm install -g vercel
-vercel
+git add .
+git commit -m "Deploy 10-day locked playlist"
+git push origin main
 ```
-
+Import the repository on [vercel.com/new](https://vercel.com/new) and click **Deploy**.
