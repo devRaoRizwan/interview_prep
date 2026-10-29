@@ -11,21 +11,20 @@ import {
   ChevronLeft, 
   ChevronRight, 
   RotateCcw, 
-  BookOpen, 
   ExternalLink, 
-  FileText, 
   Sparkles,
   Flame,
   Unlock,
-  CheckCircle2,
   Clock,
-  Layers
+  Menu,
+  X,
+  BookOpen
 } from 'lucide-react';
 
-const STORAGE_KEY_COMPLETED = 'django_10day_completed_v3';
-const STORAGE_KEY_NOTES = 'django_10day_notes_v3';
-const STORAGE_KEY_LAST_ID = 'django_10day_last_id_v3';
-const STORAGE_KEY_STRICT_LOCK = 'django_10day_strict_lock_v3';
+const STORAGE_KEY_COMPLETED = 'django_10day_completed_v4';
+const STORAGE_KEY_NOTES = 'django_10day_notes_v4';
+const STORAGE_KEY_LAST_ID = 'django_10day_last_id_v4';
+const STORAGE_KEY_STRICT_LOCK = 'django_10day_strict_lock_v4';
 
 export default function App() {
   // Completed questions map { [id]: boolean }
@@ -48,7 +47,7 @@ export default function App() {
     }
   });
 
-  // Strict lock progression (enabled by default as requested: lock everything, only one video unlocked)
+  // Strict lock progression (enabled by default)
   const [strictLock, setStrictLock] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_STRICT_LOCK);
@@ -74,6 +73,7 @@ export default function App() {
   const [loopMode, setLoopMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [currentNote, setCurrentNote] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Persist states
   useEffect(() => {
@@ -108,16 +108,15 @@ export default function App() {
     }
   }, [strictLock]);
 
-  // Sync current note when question changes
+  // Sync current note
   useEffect(() => {
     setCurrentNote(notesMap[activeQuestionId] || '');
   }, [activeQuestionId, notesMap]);
 
-  // Is a specific question unlocked?
+  // Is question unlocked?
   const isQuestionUnlocked = useCallback((id) => {
     if (!strictLock) return true;
     if (id === 1) return true;
-    // Unlocked if already completed OR if the previous question is completed
     return !!completedMap[id] || !!completedMap[id - 1];
   }, [strictLock, completedMap]);
 
@@ -144,12 +143,11 @@ export default function App() {
       [id]: isNowDone
     }));
 
-    // If marked done, automatically unlock and advance to next question if on current
+    // If completed and next question exists, automatically advance after brief pause
     if (isNowDone && id < QUESTIONS_DATA.length) {
-      // Optional subtle delay to show celebration before advancing
       setTimeout(() => {
         setActiveQuestionId(id + 1);
-      }, 400);
+      }, 350);
     }
   }, [completedMap]);
 
@@ -185,62 +183,57 @@ export default function App() {
   const hasNext = currentQuestion.id < QUESTIONS_DATA.length;
   const isNextUnlocked = hasNext && isQuestionUnlocked(currentQuestion.id + 1);
 
-  // Jump to specific day (picks first unlocked question in that day)
+  // Select a day
   const handleSelectDay = (dayNum) => {
     const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === dayNum);
-    // Find first unfinished or first unlocked question in that day
     const firstUnfinished = dayQuestions.find((q) => isQuestionUnlocked(q.id) && !completedMap[q.id]);
     const target = firstUnfinished || dayQuestions[0];
-    if (isQuestionUnlocked(target.id) || !strictLock) {
-      setActiveQuestionId(target.id);
-    } else {
-      // If locked, jump to highest available
-      setActiveQuestionId(target.id);
-    }
+    setActiveQuestionId(target.id);
+    setMobileMenuOpen(false);
   };
 
   return (
-    <div className="w-full min-h-screen bg-page flex flex-col lg:grid lg:grid-cols-[280px_minmax(0,1fr)] max-w-[1600px] mx-auto text-ink font-sans">
+    <div className="w-full min-h-screen bg-page flex flex-col lg:grid lg:grid-cols-[284px_minmax(0,1fr)] max-w-[1600px] mx-auto text-ink">
       
-      {/* SIDEBAR: 10-DAY ROADMAP (comback2026 style) */}
-      <aside className="border-r border-line bg-sidebar p-5 lg:h-screen lg:sticky lg:top-0 lg:overflow-y-auto flex flex-col justify-between">
-        <div className="space-y-4">
+      {/* DESKTOP SIDEBAR (comback2026 style) */}
+      <aside className="hidden lg:flex flex-col justify-between border-r border-line bg-sidebar p-6 h-screen sticky top-0 overflow-y-auto">
+        <div className="space-y-5">
           {/* Brand */}
-          <div className="flex items-center gap-3 px-1">
-            <div className="w-9 h-9 rounded-xl bg-ink text-white font-heading font-extrabold text-base flex items-center justify-center shadow-subtle">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-ink text-white font-heading font-extrabold text-base flex items-center justify-center shadow-subtle flex-shrink-0">
               DJ
             </div>
             <div>
               <strong className="block font-heading font-extrabold text-sm tracking-tight text-ink">
                 Django Journey
               </strong>
-              <small className="block text-muted text-[11px]">
+              <small className="block text-muted text-[11px] font-medium">
                 10-Day Plan • 5 Questions/Day
               </small>
             </div>
           </div>
 
-          {/* Roadmap Progress Card (comback2026 journey-card style) */}
-          <section className="p-3.5 rounded-xl border border-line bg-white shadow-subtle">
+          {/* Roadmap Card (comback2026 journey-card) */}
+          <section className="comback-card p-4">
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
               YOUR 10-DAY ROADMAP
             </p>
-            <strong className="block my-1.5 font-heading font-bold text-xs sm:text-sm text-ink">
+            <strong className="block my-2 font-heading font-bold text-sm text-ink">
               {completedCount} of {totalCount} Questions Mastered
             </strong>
-            <div className="w-full h-1.5 bg-line rounded-full overflow-hidden mb-1.5">
+            <div className="w-full h-1.5 bg-[#e7e7ec] rounded-full overflow-hidden mb-2">
               <div 
-                className="h-full bg-ink rounded-full transition-all duration-300"
+                className="h-full comback-progress-fill"
                 style={{ width: `${overallPercent}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] text-muted">
+            <div className="flex items-center justify-between text-[11px] text-muted font-medium">
               <span>{overallPercent}% completed</span>
               <span className="font-semibold text-ink">{totalCount - completedCount} left</span>
             </div>
           </section>
 
-          {/* 10 Days List */}
+          {/* Day Navigation List (comback2026 week-list) */}
           <nav className="space-y-1.5" aria-label="10 Day Schedule">
             {DAYS_ROADMAP.map((d) => {
               const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
@@ -256,31 +249,35 @@ export default function App() {
                   onClick={() => handleSelectDay(d.day)}
                   className={`w-full text-left p-2.5 rounded-xl border flex items-center gap-2.5 transition-all ${
                     isDayActive
-                      ? 'border-ink bg-white shadow-subtle ring-1 ring-ink/20'
+                      ? 'border-line-strong bg-paper-muted shadow-subtle'
+                      : isDayComplete
+                      ? 'border-signal-border bg-signal-pale/50 hover:border-signal hover:bg-signal-pale'
                       : 'border-line bg-white hover:border-line-strong hover:bg-paper-muted'
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center font-heading font-bold text-[11px] ${
                     isDayActive 
-                      ? 'bg-ink text-white' 
+                      ? 'bg-ink text-white shadow-subtle' 
                       : isDayComplete 
-                      ? 'bg-paper-muted text-ink' 
+                      ? 'bg-signal-ink text-white' 
                       : 'bg-paper-muted text-muted'
                   }`}>
                     {isDayComplete ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : `D${d.day}`}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <strong className="block text-xs font-bold font-heading truncate text-ink">
+                    <strong className={`block text-xs font-bold font-heading truncate ${
+                      isDayComplete ? 'text-signal-ink' : 'text-ink'
+                    }`}>
                       Day {d.day}: {d.title}
                     </strong>
-                    <small className="block text-[10px] text-muted truncate mt-0.5">
-                      {dayDoneCount}/{dayQuestions.length} questions
+                    <small className="block text-[10px] text-muted truncate mt-0.5 font-medium">
+                      {dayDoneCount}/{dayQuestions.length} completed
                     </small>
                   </div>
 
                   {!isDayUnlocked && (
-                    <Lock className="w-3.5 h-3.5 text-muted/60 flex-shrink-0" />
+                    <Lock className="w-3.5 h-3.5 text-muted/50 flex-shrink-0" />
                   )}
                 </button>
               );
@@ -288,58 +285,152 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Sidebar Controls */}
-        <div className="mt-6 pt-3 border-t border-line space-y-2">
+        {/* Sidebar Footer Controls */}
+        <div className="pt-4 border-t border-line space-y-2">
           {/* Lock mode toggle */}
           <button
             type="button"
             onClick={() => setStrictLock(!strictLock)}
-            className="w-full text-left px-2 py-1.5 rounded-lg border border-line bg-white text-[11px] text-muted hover:text-ink hover:border-line-strong flex items-center justify-between transition-colors"
+            className="w-full text-left px-3 py-2 rounded-lg border border-line-strong bg-white text-xs text-muted hover:text-ink hover:border-ink flex items-center justify-between transition-colors shadow-subtle"
           >
-            <span className="flex items-center gap-1.5">
-              {strictLock ? <Lock className="w-3 h-3 text-ink" /> : <Unlock className="w-3 h-3 text-emerald-600" />}
-              <span>Progression Lock</span>
+            <span className="flex items-center gap-1.5 font-bold">
+              {strictLock ? <Lock className="w-3.5 h-3.5 text-ink" /> : <Unlock className="w-3.5 h-3.5 text-signal-ink" />}
+              <span>Strict Progression</span>
             </span>
-            <span className={`font-bold font-mono text-[10px] px-1.5 py-0.2 rounded ${strictLock ? 'bg-paper-muted text-ink' : 'bg-emerald-50 text-emerald-600'}`}>
-              {strictLock ? 'ON' : 'OFF'}
+            <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded ${strictLock ? 'bg-paper-muted text-ink' : 'bg-signal-pale text-signal-ink'}`}>
+              {strictLock ? 'LOCKED' : 'FREE'}
             </span>
           </button>
 
           <button
             type="button"
             onClick={handleReset}
-            className="w-full text-left px-2 py-1 text-[11px] text-muted hover:text-red-600 transition-colors flex items-center gap-1.5"
+            className="w-full text-left px-3 py-1.5 text-xs text-muted hover:text-red-600 transition-colors flex items-center gap-1.5"
           >
             <RotateCcw className="w-3 h-3" />
-            <span>Reset all progress</span>
+            <span>Reset progress</span>
           </button>
         </div>
       </aside>
 
-      {/* MAIN FOCUSED CONTENT AREA (ONE VIDEO AT A TIME) */}
+      {/* MOBILE DRAWER / MODAL */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex justify-start">
+          <div className="w-[85%] max-w-xs bg-white h-full p-5 overflow-y-auto flex flex-col justify-between shadow-2xl border-r border-line animate-in slide-in-from-left duration-200">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-ink text-white font-heading font-extrabold text-sm flex items-center justify-center">
+                    DJ
+                  </div>
+                  <strong className="font-heading font-extrabold text-sm">Django Journey</strong>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1 rounded-lg hover:bg-paper-muted text-muted"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Progress summary */}
+              <div className="comback-card p-3">
+                <p className="text-[10px] font-extrabold uppercase text-muted m-0">OVERALL PROGRESS</p>
+                <div className="my-1 text-sm font-bold">{completedCount} of {totalCount} Mastered ({overallPercent}%)</div>
+                <div className="w-full h-1.5 bg-[#e7e7ec] rounded-full overflow-hidden">
+                  <div className="h-full comback-progress-fill" style={{ width: `${overallPercent}%` }} />
+                </div>
+              </div>
+
+              {/* Days list */}
+              <div className="space-y-1.5">
+                {DAYS_ROADMAP.map((d) => {
+                  const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
+                  const done = dayQuestions.filter((q) => !!completedMap[q.id]).length;
+                  const isDayActive = currentQuestion.day === d.day;
+                  const isDayUnlocked = isQuestionUnlocked(dayQuestions[0].id);
+
+                  return (
+                    <button
+                      key={d.day}
+                      type="button"
+                      onClick={() => handleSelectDay(d.day)}
+                      className={`w-full text-left p-2.5 rounded-xl border flex items-center gap-2.5 text-xs ${
+                        isDayActive ? 'border-ink bg-paper-muted font-bold' : 'border-line bg-white'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-[10px] ${
+                        isDayActive ? 'bg-ink text-white' : 'bg-paper-muted text-muted'
+                      }`}>
+                        {done === dayQuestions.length ? '✓' : `D${d.day}`}
+                      </div>
+                      <div className="flex-1 truncate">Day {d.day}: {d.title}</div>
+                      {!isDayUnlocked && <Lock className="w-3 h-3 text-muted/50" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-line">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="w-full text-left text-xs text-muted hover:text-red-600 flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset all progress</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MAIN FOCUSED CONTENT AREA */}
       <main className="min-w-0 flex flex-col bg-page">
         
-        {/* Topbar: 10 Days Stepper (comback2026 date-chips style) */}
+        {/* Topbar: Mobile Brand Header & Desktop Day Stepper */}
         <header className="p-4 sm:px-8 border-b border-line bg-white sticky top-0 z-20">
-          <div className="flex items-center justify-between gap-3 mb-3">
+          
+          {/* Mobile Top Strip */}
+          <div className="lg:hidden flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-line">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="comback-button h-8 px-2.5 flex items-center gap-1.5 text-xs"
+            >
+              <Menu className="w-4 h-4" />
+              <span>10-Day Plan</span>
+            </button>
+
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-bold text-muted block">Mastered</span>
+              <span className="text-xs font-bold font-mono text-ink">{completedCount}/{totalCount} ({overallPercent}%)</span>
+            </div>
+          </div>
+
+          {/* Desktop Heading Strip */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
-                10-DAY PLAYLIST • PACE: 5 QUESTIONS / DAY
+                10-DAY STUDY PLAN • 5 QUESTIONS PER DAY
               </p>
               <h1 className="m-0 mt-0.5 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
                 Day {currentDayInfo.day}: {currentDayInfo.title}
               </h1>
             </div>
 
-            {/* Overall Day Stats pill */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-line bg-paper-muted text-xs">
-              <span className="font-bold text-ink">Day Progress:</span>
-              <span className="font-mono text-muted">{completedInCurrentDay}/{questionsInCurrentDay.length} done ({dayPercent}%)</span>
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1.5 rounded-lg border border-line bg-paper-muted text-xs flex items-center gap-2 shadow-subtle">
+                <span className="font-bold text-ink">Day Progress:</span>
+                <span className="font-mono text-muted">{completedInCurrentDay}/{questionsInCurrentDay.length} ({dayPercent}%)</span>
+              </div>
             </div>
           </div>
 
-          {/* 10-Days Quick Chips (styled like date-chips in comback2026) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {/* 10-Days Horizontal Chips (comback2026 date-chips style) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
             {DAYS_ROADMAP.map((d) => {
               const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
               const done = dayQuestions.filter((q) => !!completedMap[q.id]).length;
@@ -354,19 +445,19 @@ export default function App() {
                   onClick={() => handleSelectDay(d.day)}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
                     isSelected
-                      ? 'border-ink bg-ink text-white shadow-subtle'
+                      ? 'comback-primary-btn'
                       : isComplete
-                      ? 'border-line-strong bg-white text-ink hover:border-ink'
+                      ? 'comback-completed-btn'
                       : !isUnlocked
-                      ? 'border-line bg-paper-muted text-muted/60 opacity-60'
-                      : 'border-line bg-white text-muted hover:border-line-strong hover:text-ink'
+                      ? 'border-line bg-paper-muted text-muted/50 cursor-not-allowed opacity-75'
+                      : 'comback-button'
                   }`}
                 >
                   <span>Day {d.day}</span>
                   {isComplete ? (
-                    <Check className={`w-3 h-3 ${isSelected ? 'text-white' : 'text-ink'}`} />
+                    <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
                   ) : !isUnlocked ? (
-                    <Lock className="w-2.5 h-2.5 text-muted/50" />
+                    <Lock className="w-2.5 h-2.5 opacity-60" />
                   ) : (
                     <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-muted'}`}>
                       {done}/{dayQuestions.length}
@@ -377,10 +468,10 @@ export default function App() {
             })}
           </div>
 
-          {/* Questions Stepper in Current Day */}
-          <div className="mt-3 pt-3 border-t border-line flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {/* Question Step Pills in Current Day */}
+          <div className="mt-2.5 pt-2.5 border-t border-line flex items-center gap-2 overflow-x-auto no-scrollbar">
             <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex-shrink-0">
-              Questions:
+              Day {currentQuestion.day} Questions:
             </span>
             <div className="flex items-center gap-1.5">
               {questionsInCurrentDay.map((q, idx) => {
@@ -394,24 +485,24 @@ export default function App() {
                     type="button"
                     disabled={!isUnlocked}
                     onClick={() => setActiveQuestionId(q.id)}
-                    className={`h-7 px-2.5 rounded-md border text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                    className={`h-7 px-2.5 rounded-lg border text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
                       isSelected
-                        ? 'border-ink bg-ink text-white shadow-subtle'
+                        ? 'comback-primary-btn'
                         : isDone
-                        ? 'border-line bg-paper-muted text-ink hover:border-line-strong'
+                        ? 'comback-completed-btn'
                         : !isUnlocked
                         ? 'border-line bg-paper-muted text-muted/40 cursor-not-allowed'
-                        : 'border-line bg-white text-muted hover:border-ink hover:text-ink'
+                        : 'comback-button'
                     }`}
                   >
                     {isDone ? (
-                      <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-ink'}`} />
+                      <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
                     ) : !isUnlocked ? (
-                      <Lock className="w-2.5 h-2.5 text-muted/40" />
+                      <Lock className="w-2.5 h-2.5 opacity-40" />
                     ) : (
                       <span>Q{idx + 1}</span>
                     )}
-                    <span className="hidden md:inline text-[11px]">Q#{q.id}</span>
+                    <span className="text-[11px] opacity-80">Q#{q.id}</span>
                   </button>
                 );
               })}
@@ -419,13 +510,13 @@ export default function App() {
           </div>
         </header>
 
-        {/* FOCUSED SINGLE VIDEO STATION */}
+        {/* FOCUSED SINGLE VIDEO STATION CONTAINER */}
         <div className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
           
-          {/* Main Question Card (Only ONE Question shown) */}
-          <section className="border border-line rounded-2xl bg-white shadow-card overflow-hidden">
+          {/* Main Card (comback-card style with clean borders) */}
+          <section className="comback-card overflow-hidden">
             
-            {/* Question Heading */}
+            {/* Question Header */}
             <div className="p-5 sm:p-6 pb-4 border-b border-line">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
@@ -433,18 +524,18 @@ export default function App() {
                 </span>
 
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2 py-0.5 rounded border border-line">
-                    <Clock className="w-3 h-3 text-muted" />
+                  <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2.5 py-0.5 rounded-md border border-line shadow-subtle">
+                    <Clock className="w-3.5 h-3.5 text-muted" />
                     {currentQuestion.startTime} — {currentQuestion.endTime} ({currentQuestion.endSeconds - currentQuestion.startSeconds}s)
                   </span>
 
                   {isCurrentCompleted ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink bg-paper-muted px-2 py-0.5 rounded border border-line">
-                      <Check className="w-3 h-3 stroke-[2.5]" />
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-signal-ink bg-signal-pale border border-signal-border px-2.5 py-0.5 rounded-md">
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                       Mastered
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted px-2 py-0.5 rounded border border-line">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted border border-line px-2 py-0.5 rounded-md">
                       Pending
                     </span>
                   )}
@@ -456,31 +547,31 @@ export default function App() {
               </h2>
             </div>
 
-            {/* Embedded Video: ONLY plays this particular question part */}
-            <div className="p-4 sm:p-6 pb-2">
+            {/* Video Player: ONLY plays this particular question part */}
+            <div className="p-4 sm:p-6 pb-3">
               <YouTubePlayer
                 currentQuestion={currentQuestion}
                 loopMode={loopMode}
                 setLoopMode={setLoopMode}
-                onSegmentEnd={() => {
-                  // Prompt user or highlight completion button when video finishes
-                }}
+                onSegmentEnd={() => {}}
               />
             </div>
 
-            {/* PRIMARY COMPLETION CHECKBOX BUTTON */}
-            <div className="px-4 sm:px-6 py-4 bg-paper-muted/50 border-t border-b border-line flex flex-wrap items-center justify-between gap-3">
+            {/* PRIMARY COMPLETION CHECKBOX BUTTON (Clean, bold action) */}
+            <div className="px-4 sm:px-6 py-4 bg-paper-muted border-t border-b border-line flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => handleToggleComplete(currentQuestion.id)}
-                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl border text-sm font-bold font-heading transition-all flex items-center justify-center gap-2 shadow-subtle ${
+                className={`w-full sm:w-auto px-5 py-2.5 text-sm flex items-center justify-center gap-2.5 ${
                   isCurrentCompleted
-                    ? 'bg-ink border-ink text-white'
-                    : 'bg-white border-line-strong hover:border-ink hover:bg-paper-muted text-ink'
+                    ? 'comback-completed-btn'
+                    : 'comback-primary-btn'
                 }`}
               >
                 <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                  isCurrentCompleted ? 'border-white bg-white text-ink' : 'border-line-strong bg-paper-muted'
+                  isCurrentCompleted 
+                    ? 'border-signal-border bg-signal-ink text-white' 
+                    : 'border-white/40 bg-white/10 text-white'
                 }`}>
                   {isCurrentCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
@@ -491,9 +582,9 @@ export default function App() {
                 </span>
               </button>
 
-              <div className="text-xs text-muted">
+              <div className="text-xs text-muted font-medium">
                 {isNextUnlocked && hasNext && (
-                  <span className="text-ink font-medium">Question #{currentQuestion.id + 1} unlocked</span>
+                  <span className="text-signal-ink font-bold">✓ Question #{currentQuestion.id + 1} unlocked</span>
                 )}
               </div>
             </div>
@@ -510,54 +601,54 @@ export default function App() {
               </div>
 
               {currentQuestion.tip && (
-                <div className="p-3 rounded-xl border border-line bg-paper-muted text-xs text-ink flex items-start gap-2.5">
-                  <span className="font-bold text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-white border border-line text-ink flex-shrink-0">
+                <div className="p-3.5 rounded-xl border border-line bg-white text-xs text-ink flex items-start gap-2.5 shadow-subtle">
+                  <span className="font-bold text-[10px] uppercase tracking-wide px-2 py-0.5 rounded border border-line-strong bg-paper-muted text-ink flex-shrink-0">
                     QUICK RECALL
                   </span>
-                  <span className="font-mono text-xs text-ink">{currentQuestion.tip}</span>
+                  <span className="font-mono text-xs text-ink/90">{currentQuestion.tip}</span>
                 </div>
               )}
 
               {/* CURATED ARTICLES & IN-DEPTH STUDY LINKS */}
               <div className="pt-2">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2.5">
                   IN-DEPTH READING & OFFICIAL DOCUMENTATION
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {currentQuestion.articles.map((art, idx) => (
                     <a
                       key={idx}
                       href={art.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-3 rounded-xl border border-line bg-white hover:border-ink hover:bg-paper-muted transition-all flex items-start justify-between gap-3 group shadow-subtle"
+                      className="comback-button p-3.5 flex items-start justify-between gap-3 text-left group"
                     >
                       <div className="min-w-0">
-                        <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                        <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider block">
                           {art.source}
                         </span>
-                        <strong className="text-xs font-bold text-ink group-hover:text-ink block mt-0.5 line-clamp-1">
+                        <strong className="text-xs font-bold font-heading text-ink group-hover:text-ink block mt-1 line-clamp-1">
                           {art.title}
                         </strong>
                       </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-muted group-hover:text-ink flex-shrink-0 mt-0.5" />
+                      <ExternalLink className="w-3.5 h-3.5 text-muted group-hover:text-ink flex-shrink-0 mt-1" />
                     </a>
                   ))}
                 </div>
               </div>
 
               {/* PERSONAL STUDY NOTES */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-1.5">
+              <div className="pt-2 border-t border-line">
+                <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
                     YOUR INTERVIEW NOTES
                   </p>
                   <button
                     type="button"
                     onClick={() => setShowNotes(!showNotes)}
-                    className="text-xs text-muted hover:text-ink font-medium"
+                    className="text-xs text-muted hover:text-ink font-bold"
                   >
-                    {showNotes ? 'Collapse' : currentNote ? 'Edit Notes' : '+ Add Note'}
+                    {showNotes ? 'Collapse' : currentNote ? 'Edit Notes' : '+ Add Notes'}
                   </button>
                 </div>
 
@@ -569,13 +660,13 @@ export default function App() {
                       onBlur={handleSaveNote}
                       placeholder="Write your explanation, syntax reminders, or interview answers here..."
                       rows={3}
-                      className="w-full text-xs font-sans bg-paper-muted border border-line rounded-xl p-3 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y"
+                      className="w-full text-xs font-sans bg-white border border-line-strong rounded-xl p-3 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y shadow-subtle"
                     />
                     <div className="flex justify-end">
                       <button
                         type="button"
                         onClick={handleSaveNote}
-                        className="px-3 py-1 rounded-md border border-line bg-white text-xs font-bold hover:bg-paper-muted text-ink"
+                        className="comback-button px-3.5 py-1 text-xs font-bold"
                       >
                         Save Note
                       </button>
@@ -583,12 +674,12 @@ export default function App() {
                   </div>
                 ) : (
                   currentNote && (
-                    <p 
+                    <div 
                       onClick={() => setShowNotes(true)}
-                      className="p-2.5 rounded-lg border border-line bg-paper-muted text-xs text-ink/80 italic cursor-pointer hover:border-line-strong"
+                      className="p-3 rounded-xl border border-line bg-paper-muted text-xs text-ink/80 italic cursor-pointer hover:border-line-strong transition-colors"
                     >
                       "{currentNote}"
-                    </p>
+                    </div>
                   )
                 )}
               </div>
@@ -600,7 +691,7 @@ export default function App() {
                 type="button"
                 onClick={() => hasPrevious && setActiveQuestionId(currentQuestion.id - 1)}
                 disabled={!hasPrevious}
-                className="px-3.5 py-2 rounded-lg border border-line bg-white hover:bg-paper-muted text-ink disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1.5 text-xs font-bold shadow-subtle"
+                className="comback-button px-3.5 py-2 text-xs flex items-center gap-1.5"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Previous Question</span>
@@ -614,11 +705,15 @@ export default function App() {
                 type="button"
                 onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
                 disabled={!hasNext || !isNextUnlocked}
-                className="px-3.5 py-2 rounded-lg border border-ink bg-ink text-white hover:bg-brand-hover disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1.5 text-xs font-bold shadow-subtle"
+                className={`px-3.5 py-2 text-xs flex items-center gap-1.5 ${
+                  !isNextUnlocked && hasNext 
+                    ? 'comback-button opacity-50 cursor-not-allowed' 
+                    : 'comback-primary-btn'
+                }`}
               >
                 <span>Next Question</span>
                 {!isNextUnlocked && hasNext ? (
-                  <Lock className="w-3.5 h-3.5 text-white/70" />
+                  <Lock className="w-3.5 h-3.5" />
                 ) : (
                   <ChevronRight className="w-4 h-4" />
                 )}
@@ -626,20 +721,22 @@ export default function App() {
             </div>
           </section>
 
-          {/* Motivational Tip Box */}
-          <div className="p-4 rounded-xl border border-line bg-white text-xs text-muted flex items-center justify-between gap-3 shadow-subtle">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-ink flex-shrink-0" />
-              <span>
-                <strong>Daily Habit:</strong> Master 5 questions each day. You'll finish all 54 questions in exactly 10 days!
+          {/* Motivational Habit Card */}
+          <div className="comback-card p-4 text-xs text-muted flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-paper-muted border border-line flex items-center justify-center flex-shrink-0">
+                <Flame className="w-4 h-4 text-ink" />
+              </div>
+              <span className="leading-snug">
+                <strong className="text-ink">Daily Habit:</strong> Master 5 questions each day. You'll complete all 54 questions in exactly 10 days!
               </span>
             </div>
-            <span className="text-ink font-bold font-mono">Day {currentQuestion.day}/10</span>
+            <span className="text-ink font-bold font-mono text-xs flex-shrink-0">Day {currentQuestion.day}/10</span>
           </div>
 
         </div>
 
-        {/* Minimal Footer */}
+        {/* Minimal Clean Footer */}
         <footer className="mt-auto px-6 py-4 border-t border-line bg-white text-center text-xs text-muted">
           Progress and notes are saved automatically in your browser's local storage.
         </footer>

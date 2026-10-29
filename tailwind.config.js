@@ -7,34 +7,35 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"DM Sans"', 'sans-serif'],
-        heading: ['"Manrope"', 'sans-serif'],
+        sans: ['"DM Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        heading: ['"Manrope"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
-        page: '#fafafa',
+        page: '#ffffff',
         paper: '#ffffff',
-        'paper-muted': '#f7f7f7',
-        sidebar: '#f7f6f2',
-        line: '#eaeaea',
-        'line-strong': '#d4d4d4',
-        ink: '#171717',
-        muted: '#737373',
+        'paper-muted': '#f7f7f9',
+        sidebar: '#ffffff',
+        line: '#e4e4e6',
+        'line-strong': '#d4d4d8',
+        ink: '#0a0a0a',
+        muted: '#565656',
         brand: {
-          DEFAULT: '#171717',
-          hover: '#333333',
-          pale: '#f4f4f4',
+          DEFAULT: '#0a0a0a',
+          hover: '#000000',
+          pale: '#f7f7f9',
         },
-        sage: {
-          DEFAULT: '#52766d',
-          dark: '#3d5952',
-          pale: '#eef3f1',
+        signal: {
+          DEFAULT: '#10b981',
+          ink: '#047857',
+          border: '#a7f3d0',
+          pale: '#f0fdf8',
         }
       },
       boxShadow: {
-        subtle: '0 1px 2px rgb(0 0 0 / 4%)',
-        card: '0 1px 3px rgb(0 0 0 / 4%), 0 1px 2px rgb(0 0 0 / 2%)',
-        hover: '0 4px 14px rgb(0 0 0 / 6%)',
+        subtle: 'inset 0 1px #fff, 0 1px 2px #0a0a0a0d',
+        card: 'inset 0 1px #fff, 0 8px 20px -8px #0a0a0a1a, 0 24px 48px -32px #0a0a0a42',
+        hover: 'inset 0 1px #fff, 0 2px 4px #0a0a0a0d, 0 12px 28px -10px #0a0a0a29',
       }
     },
   },

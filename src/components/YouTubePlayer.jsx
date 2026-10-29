@@ -1,13 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { 
-  Play, 
-  Pause, 
   RotateCcw, 
   ExternalLink, 
   Repeat, 
-  FastForward, 
-  Clock,
-  Sparkles
+  Clock 
 } from 'lucide-react';
 import { VIDEO_ID, VIDEO_BASE_URL } from '../data/questions';
 
@@ -52,7 +48,7 @@ export default function YouTubePlayer({
     return () => clearTimeout(timeout);
   }, []);
 
-  // Initialize YT player
+  // Initialize YT player instance
   useEffect(() => {
     if (!apiReady || playerRef.current || useIframeFallback) return;
 
@@ -211,9 +207,9 @@ export default function YouTubePlayer({
   const segmentPercent = Math.min(100, (currentProgressSeconds / segmentDuration) * 100);
 
   return (
-    <div className="w-full bg-white rounded-xl overflow-hidden border border-line">
-      {/* 16:9 Video Player */}
-      <div className="relative w-full pt-[56.25%] bg-black">
+    <div className="w-full rounded-xl overflow-hidden border border-line bg-black shadow-subtle">
+      {/* 16:9 Video Container */}
+      <div className="relative w-full aspect-video bg-black">
         {!useIframeFallback ? (
           <div className="absolute inset-0 w-full h-full">
             <div id="yt-single-player" className="w-full h-full" />
@@ -230,32 +226,32 @@ export default function YouTubePlayer({
         )}
       </div>
 
-      {/* Segment Timeline Bar */}
-      <div className="w-full h-1 bg-line overflow-hidden">
+      {/* Segment Timeline Progress Bar */}
+      <div className="w-full h-1 bg-[#e7e7ec] overflow-hidden">
         <div 
-          className="h-full bg-ink transition-all duration-150"
+          className="h-full comback-progress-fill transition-all duration-150"
           style={{ width: `${segmentPercent}%` }}
         />
       </div>
 
-      {/* Sub-Player Controls Bar */}
-      <div className="px-4 py-2.5 bg-paper-muted border-t border-line flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
+      {/* Player Utility Bar */}
+      <div className="px-3 sm:px-4 py-2.5 bg-paper-muted border-t border-line flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleReplaySegment}
             title="Replay this answer segment"
-            className="h-7 px-2.5 rounded-md border border-line bg-white hover:border-ink hover:text-ink text-muted font-bold transition-all flex items-center gap-1.5 shadow-subtle"
+            className="comback-button h-8 px-2.5 sm:px-3 text-xs flex items-center gap-1.5"
           >
-            <RotateCcw className="w-3 h-3" />
-            <span>Replay Answer</span>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="font-bold">Replay</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSeekRelative(-5)}
             title="Rewind 5 seconds"
-            className="h-7 px-2 rounded-md border border-line bg-white hover:border-ink text-muted hover:text-ink font-mono font-medium transition-colors"
+            className="comback-button h-8 px-2 font-mono text-xs"
           >
             -5s
           </button>
@@ -264,23 +260,23 @@ export default function YouTubePlayer({
             type="button"
             onClick={() => handleSeekRelative(5)}
             title="Forward 5 seconds"
-            className="h-7 px-2 rounded-md border border-line bg-white hover:border-ink text-muted hover:text-ink font-mono font-medium transition-colors"
+            className="comback-button h-8 px-2 font-mono text-xs"
           >
             +5s
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Speed Presets */}
-          <div className="flex items-center border border-line rounded-md p-0.5 bg-white text-xs">
+          <div className="flex items-center border border-line-strong rounded-lg p-0.5 bg-white shadow-subtle">
             {[1, 1.25, 1.5, 2].map((rate) => (
               <button
                 key={rate}
                 type="button"
                 onClick={() => handleRateChange(rate)}
-                className={`px-1.5 py-0.5 rounded font-mono font-bold text-[11px] transition-colors ${
+                className={`px-1.5 sm:px-2 py-0.5 rounded font-mono font-bold text-[11px] transition-colors ${
                   playbackRate === rate
-                    ? 'bg-ink text-white'
+                    ? 'bg-ink text-white shadow-sm'
                     : 'text-muted hover:text-ink'
                 }`}
               >
@@ -289,19 +285,19 @@ export default function YouTubePlayer({
             ))}
           </div>
 
-          {/* Loop Mode */}
+          {/* Loop Mode Toggle */}
           <button
             type="button"
             onClick={() => setLoopMode(!loopMode)}
             title={loopMode ? 'Looping answer ON' : 'Looping answer OFF'}
-            className={`h-7 px-2 rounded-md border text-[11px] font-bold transition-all flex items-center gap-1 ${
+            className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 ${
               loopMode
-                ? 'bg-ink border-ink text-white'
-                : 'bg-white border-line text-muted hover:text-ink'
+                ? 'border-ink bg-ink text-white shadow-subtle'
+                : 'comback-button text-muted hover:text-ink'
             }`}
           >
             <Repeat className="w-3 h-3" />
-            <span>Loop</span>
+            <span className="hidden sm:inline">Loop</span>
           </button>
 
           {/* External Link */}
@@ -310,7 +306,7 @@ export default function YouTubePlayer({
             target="_blank"
             rel="noopener noreferrer"
             title="Open on YouTube at this exact timestamp"
-            className="p-1 rounded-md border border-line bg-white text-muted hover:text-ink transition-colors"
+            className="comback-button h-8 w-8 flex items-center justify-center p-0 text-muted hover:text-ink"
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
