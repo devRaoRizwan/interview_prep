@@ -4,23 +4,37 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"DM Sans"', 'sans-serif'],
+        heading: ['"Manrope"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
       colors: {
+        page: '#fafafa',
+        paper: '#ffffff',
+        'paper-muted': '#f7f7f7',
+        sidebar: '#f7f6f2',
+        line: '#eaeaea',
+        'line-strong': '#d4d4d4',
+        ink: '#171717',
+        muted: '#737373',
         brand: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
+          DEFAULT: '#171717',
+          hover: '#333333',
+          pale: '#f4f4f4',
         },
-        django: {
-          DEFAULT: '#092e20',
-          dark: '#051b13',
-          accent: '#44b78b',
-          muted: '#2c4f42'
+        sage: {
+          DEFAULT: '#52766d',
+          dark: '#3d5952',
+          pale: '#eef3f1',
         }
+      },
+      boxShadow: {
+        subtle: '0 1px 2px rgb(0 0 0 / 4%)',
+        card: '0 1px 3px rgb(0 0 0 / 4%), 0 1px 2px rgb(0 0 0 / 2%)',
+        hover: '0 4px 14px rgb(0 0 0 / 6%)',
       }
     },
   },

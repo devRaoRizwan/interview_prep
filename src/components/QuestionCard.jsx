@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { 
-  CheckCircle2, 
-  Circle, 
+  Check, 
   Play, 
-  Clock, 
-  Tag, 
-  FileEdit, 
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  Sparkles
+  ExternalLink, 
+  ChevronDown, 
+  ChevronUp, 
+  FileText,
+  Clock
 } from 'lucide-react';
 import { VIDEO_BASE_URL } from '../data/questions';
 
@@ -41,56 +38,49 @@ export default function QuestionCard({
   return (
     <div
       onClick={() => onSelect(question)}
-      className={`group relative rounded-xl border p-4 transition-all duration-200 cursor-pointer ${
+      className={`border rounded-xl p-4 sm:p-5 transition-all cursor-pointer relative bg-white ${
         isActive
-          ? 'bg-slate-800/90 border-emerald-500 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-500/50'
+          ? 'border-ink shadow-hover ring-1 ring-ink'
           : isCompleted
-          ? 'bg-slate-900/50 border-slate-800/60 opacity-80 hover:opacity-100 hover:border-slate-700'
-          : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+          ? 'border-line bg-paper-muted/60 opacity-85 hover:opacity-100 hover:border-line-strong'
+          : 'border-line hover:border-line-strong hover:shadow-subtle'
       }`}
     >
       <div className="flex items-start gap-3.5">
-        {/* Checkbox button */}
+        {/* Task Marker Checkbox (Identical to comback2026 task-marker) */}
         <button
           type="button"
           onClick={handleCheckboxClick}
-          aria-label={isCompleted ? 'Mark as uncompleted' : 'Mark as completed'}
-          className="mt-0.5 flex-shrink-0 text-slate-500 hover:text-emerald-400 focus:outline-none transition-colors"
+          aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+          className={`w-6 h-6 flex-shrink-0 mt-0.5 rounded-lg border flex items-center justify-center transition-all ${
+            isCompleted
+              ? 'bg-ink border-ink text-white'
+              : 'bg-paper-muted border-line-strong hover:border-ink text-transparent'
+          }`}
         >
-          {isCompleted ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-500/20" />
-          ) : (
-            <Circle className="w-5 h-5 text-slate-500 hover:border-slate-400" />
-          )}
+          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
         </button>
 
-        {/* Content body */}
+        {/* Question Details */}
         <div className="flex-1 min-w-0">
-          {/* Metadata Top Row */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                Q{question.questionNumber}
-              </span>
-              <span className="text-[11px] font-medium text-slate-400">
-                {question.partName.split(':')[0]}
-              </span>
-            </div>
+          {/* Kicker & Meta Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted">
+              {question.partName.split(':')[0].toUpperCase()} • Q{question.questionNumber}
+            </span>
 
-            <div className="flex items-center gap-2">
-              {/* Duration badge */}
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/50">
-                <Clock className="w-3 h-3 text-slate-400" />
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted bg-paper-muted px-2 py-0.5 rounded border border-line">
+                <Clock className="w-3 h-3 text-muted" />
                 {question.startTime} ({durationSecs}s)
               </span>
 
-              {/* Active Indicator */}
               {isActive && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  <span className="flex gap-0.5 items-end h-3">
-                    <span className="w-0.5 bg-emerald-400 animate-eq-1" />
-                    <span className="w-0.5 bg-emerald-400 animate-eq-2" />
-                    <span className="w-0.5 bg-emerald-400 animate-eq-3" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide text-white bg-ink px-2 py-0.5 rounded">
+                  <span className="flex gap-0.5 items-end h-2.5">
+                    <span className="w-0.5 bg-white animate-eq-1" />
+                    <span className="w-0.5 bg-white animate-eq-2" />
+                    <span className="w-0.5 bg-white animate-eq-3" />
                   </span>
                   Playing
                 </span>
@@ -100,53 +90,71 @@ export default function QuestionCard({
 
           {/* Question Title */}
           <h3
-            className={`text-sm md:text-base font-semibold leading-snug tracking-tight transition-colors ${
-              isActive
-                ? 'text-emerald-300'
-                : isCompleted
-                ? 'text-slate-300 line-through decoration-slate-600/70'
-                : 'text-slate-100 group-hover:text-emerald-300'
+            className={`text-sm sm:text-[15px] font-bold font-heading leading-snug tracking-tight ${
+              isCompleted
+                ? 'text-muted line-through decoration-line-strong'
+                : 'text-ink'
             }`}
           >
             {question.title}
           </h3>
 
-          {/* Key Quick Answer Tip */}
+          {/* Quick Tip Summary */}
           {question.tip && (
-            <div className="mt-2 text-xs text-slate-400 bg-slate-950/50 rounded-lg px-2.5 py-1.5 border border-slate-800/80 font-mono flex items-center gap-2">
-              <Sparkles className="w-3 h-3 text-amber-400 flex-shrink-0" />
-              <span className="truncate text-slate-300">{question.tip}</span>
+            <div className="mt-2 text-xs font-mono text-muted bg-paper-muted rounded-lg px-2.5 py-1.5 border border-line">
+              <span className="font-sans font-bold text-ink mr-1">Concept:</span>
+              <span className="text-ink/80">{question.tip}</span>
             </div>
           )}
 
-          {/* Tags & Action Buttons */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
-            {/* Tags */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {question.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-800/70 text-slate-400 border border-slate-700/40"
-                >
-                  #{tag}
-                </span>
-              ))}
+          {/* Bottom Action Row (comback2026 button style) */}
+          <div className="mt-3.5 pt-3 border-t border-line flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {/* Play Answer Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(question);
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                  isActive
+                    ? 'bg-ink border-ink text-white'
+                    : 'bg-white border-line text-ink hover:border-ink hover:bg-paper-muted'
+                }`}
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>{isActive ? 'Playing' : 'Play Answer'}</span>
+              </button>
+
+              {/* Complete Toggle Button */}
+              <button
+                type="button"
+                onClick={handleCheckboxClick}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                  isCompleted
+                    ? 'bg-paper-muted border-line-strong text-muted hover:text-ink'
+                    : 'bg-white border-line text-muted hover:border-ink hover:text-ink'
+                }`}
+              >
+                <Check className="w-3 h-3" />
+                <span>{isCompleted ? 'Done' : 'Mark Done'}</span>
+              </button>
             </div>
 
-            {/* Note & Direct Link Actions */}
-            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            {/* Notes & External Link */}
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 onClick={() => setShowNotes(!showNotes)}
-                title="Add your notes for this question"
-                className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded transition-colors ${
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all ${
                   showNotes || localNote
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
+                    ? 'border-ink bg-paper-muted text-ink'
+                    : 'border-line text-muted hover:text-ink hover:bg-paper-muted'
                 }`}
               >
-                <FileEdit className="w-3 h-3" />
-                <span>{localNote ? 'Note saved' : 'Note'}</span>
+                <FileText className="w-3 h-3" />
+                <span>{localNote ? 'Note' : 'Add Note'}</span>
                 {showNotes ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
 
@@ -154,30 +162,27 @@ export default function QuestionCard({
                 href={`${VIDEO_BASE_URL}&t=${question.startSeconds}s`}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Direct link to timestamp"
-                className="text-slate-500 hover:text-slate-300 p-1 transition-colors"
+                title="Open on YouTube"
+                className="p-1.5 rounded-lg border border-line text-muted hover:text-ink hover:bg-paper-muted transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           </div>
 
-          {/* Collapsible Personal Note Area */}
+          {/* Notes Area */}
           {showNotes && (
             <div
-              className="mt-3 pt-3 border-t border-slate-800"
+              className="mt-3 pt-3 border-t border-line"
               onClick={(e) => e.stopPropagation()}
             >
-              <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                Your Interview Notes / Answer Bullets:
-              </label>
               <textarea
                 value={localNote}
                 onChange={(e) => setLocalNote(e.target.value)}
                 onBlur={handleNoteBlur}
-                placeholder="Write your explanation, syntax reminders, or interview points..."
+                placeholder="Write your explanation, answers, or reminders..."
                 rows={2}
-                className="w-full text-xs bg-slate-950 border border-slate-700/80 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors placeholder:text-slate-600 resize-y"
+                className="w-full text-xs font-sans bg-paper-muted border border-line rounded-lg p-2.5 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y"
               />
             </div>
           )}

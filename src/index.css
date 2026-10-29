@@ -2,46 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  }
-  code, pre {
-    font-family: 'JetBrains Mono', monospace;
-  }
+:root {
+  color-scheme: light;
+  --page: #fafafa;
+  --paper: #ffffff;
+  --paper-muted: #f7f7f7;
+  --sidebar: #f7f6f2;
+  --line: #eaeaea;
+  --line-strong: #d4d4d4;
+  --ink: #171717;
+  --muted: #737373;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
-/* Custom scrollbars */
+body {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
+  background: #d4d4d4;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 1);
+  background: #a3a3a3;
 }
 
-/* Pulse animation for active playing bar */
-@keyframes equalizer {
+/* Equalizer Bars Animation */
+@keyframes eq-bounce {
   0%, 100% { height: 4px; }
-  50% { height: 16px; }
+  50% { height: 14px; }
 }
 
 .animate-eq-1 {
-  animation: equalizer 0.8s ease-in-out infinite;
+  animation: eq-bounce 0.8s ease-in-out infinite;
 }
 .animate-eq-2 {
-  animation: equalizer 0.8s ease-in-out infinite 0.2s;
+  animation: eq-bounce 0.8s ease-in-out infinite 0.2s;
 }
 .animate-eq-3 {
-  animation: equalizer 0.8s ease-in-out infinite 0.4s;
+  animation: eq-bounce 0.8s ease-in-out infinite 0.4s;
 }
