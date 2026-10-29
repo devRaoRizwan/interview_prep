@@ -1,7 +1,7 @@
-import { PYTHON_QUESTIONS, PYTHON_DAYS, PYTHON_VIDEO_ID, PYTHON_VIDEO_BASE_URL } from './pythonData';
+import { PYTHON_QUESTIONS, PYTHON_DAYS, PYTHON_VIDEO_ID, PYTHON_VIDEO_BASE_URL } from './pythonData.js';
+import { DJANGO_DAYS, DJANGO_VIDEO_ID, DJANGO_VIDEO_BASE_URL } from './djangoData.js';
 
-export const DJANGO_VIDEO_ID = 'hMwGWqyIKEs';
-export const DJANGO_VIDEO_BASE_URL = 'https://www.youtube.com/watch?v=hMwGWqyIKEs';
+export { DJANGO_VIDEO_ID, DJANGO_VIDEO_BASE_URL };
 
 // Keep legacy exports for backward compatibility
 export const VIDEO_ID = DJANGO_VIDEO_ID;
@@ -12,83 +12,21 @@ export const TRACKS = [
     id: 'django',
     name: 'Django',
     fullName: 'Django Framework',
-    badge: '54 Questions • 10 Days',
+    badge: '54 Questions • 18 Days',
     icon: '⚡',
   },
   {
     id: 'python',
     name: 'Python',
     fullName: 'Python Core & Advanced',
-    badge: '51 Questions • 10 Days',
+    badge: '51 Questions • 17 Days',
     icon: '🐍',
   },
 ];
 
-export const DAYS_ROADMAP = [
-  {
-    day: 1,
-    title: 'CLI & Environment Setup',
-    subtitle: 'Installation, projects, apps, runserver, and superusers',
-    questionIds: [1, 2, 3, 4, 5],
-  },
-  {
-    day: 2,
-    title: 'QuerySet & Basic CRUD',
-    subtitle: 'inspectdb, all, filter, get, and database write operations',
-    questionIds: [6, 7, 8, 9, 10],
-  },
-  {
-    day: 3,
-    title: 'Architecture & Request Flow',
-    subtitle: 'MVT pattern, request lifecycle, project vs app, and default database',
-    questionIds: [11, 12, 13, 14, 15],
-  },
-  {
-    day: 4,
-    title: 'ORM, Migrations & Server',
-    subtitle: 'Loose coupling, port 8000, migration internals, ORM, and DB setup',
-    questionIds: [16, 17, 18, 19, 20],
-  },
-  {
-    day: 5,
-    title: 'Security & Query Optimization',
-    subtitle: 'CSRF tokens, lazy evaluation, select_related vs prefetch_related, filter vs get',
-    questionIds: [21, 22, 23, 24, 25],
-  },
-  {
-    day: 6,
-    title: 'Static Files & Comparisons',
-    subtitle: 'Static files, Flask vs Pyramid, Django Admin, supported databases, pros & cons',
-    questionIds: [26, 27, 28, 29, 30],
-  },
-  {
-    day: 7,
-    title: 'Views, Auth & Q Objects',
-    subtitle: 'render shortcut, authentication vs authorization, Q objects, manage.py',
-    questionIds: [31, 32, 33, 34, 35],
-  },
-  {
-    day: 8,
-    title: 'URLs, DRF, Middleware & Sessions',
-    subtitle: 'URL inclusion, DRF overview, middleware lifecycle, and sessions',
-    questionIds: [36, 37, 38, 39, 40],
-  },
-  {
-    day: 9,
-    title: 'Signals, Context & Exceptions',
-    subtitle: 'Django signals, context dictionaries, exceptions, and context processors',
-    questionIds: [41, 42, 43, 44, 45],
-  },
-  {
-    day: 10,
-    title: 'Advanced Models, Views & Caching',
-    subtitle: 'URL regex, OneToOne vs ForeignKey, field types, Generic Views, Mixins, caching',
-    questionIds: [46, 47, 48, 49, 50, 51, 52, 53, 54],
-  },
-];
+export const DAYS_ROADMAP = DJANGO_DAYS;
 
 export const QUESTIONS_DATA = [
-  // --- DAY 1 (Questions 1 - 5) ---
   {
     id: 1,
     day: 1,
@@ -169,8 +107,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 4,
-    day: 1,
-    dayIndex: 4,
+    day: 2,
+    dayIndex: 1,
     partName: 'Part 1: QuerySet & Commands',
     title: 'What is the command for migrations in Django?',
     startTime: '02:57',
@@ -195,8 +133,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 5,
-    day: 1,
-    dayIndex: 5,
+    day: 2,
+    dayIndex: 2,
     partName: 'Part 1: QuerySet & Commands',
     title: 'What is the Command To Create a Superuser in Django?',
     startTime: '04:15',
@@ -219,12 +157,10 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 2 (Questions 6 - 10) ---
   {
     id: 6,
     day: 2,
-    dayIndex: 1,
+    dayIndex: 3,
     partName: 'Part 1: QuerySet & Commands',
     title: 'What is the Django command to view a database schema of an existing (or legacy) database?',
     startTime: '04:47',
@@ -249,8 +185,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 7,
-    day: 2,
-    dayIndex: 2,
+    day: 3,
+    dayIndex: 1,
     partName: 'Part 1: QuerySet & Commands',
     title: 'How to view all items in the Model using Django QuerySet?',
     startTime: '04:58',
@@ -275,8 +211,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 8,
-    day: 2,
-    dayIndex: 3,
+    day: 3,
+    dayIndex: 2,
     partName: 'Part 1: QuerySet & Commands',
     title: 'How to filter items in the Model using Django QuerySet?',
     startTime: '05:20',
@@ -301,8 +237,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 9,
-    day: 2,
-    dayIndex: 4,
+    day: 3,
+    dayIndex: 3,
     partName: 'Part 1: QuerySet & Commands',
     title: 'How to get a particular item in the Model using Django QuerySet?',
     startTime: '05:44',
@@ -327,8 +263,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 10,
-    day: 2,
-    dayIndex: 5,
+    day: 4,
+    dayIndex: 1,
     partName: 'Part 1: QuerySet & Commands',
     title: 'How to delete/insert/update an object using QuerySet in Django?',
     startTime: '06:03',
@@ -351,12 +287,10 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 3 (Questions 11 - 15) ---
   {
     id: 11,
-    day: 3,
-    dayIndex: 1,
+    day: 4,
+    dayIndex: 2,
     partName: 'Part 1: QuerySet & Commands',
     title: 'How can you combine multiple QuerySets in a View?',
     startTime: '07:03',
@@ -381,8 +315,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 12,
-    day: 3,
-    dayIndex: 2,
+    day: 4,
+    dayIndex: 3,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Explain Django Architecture? Explain Model, Template, and Views.',
     startTime: '09:14',
@@ -407,8 +341,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 13,
-    day: 3,
-    dayIndex: 3,
+    day: 5,
+    dayIndex: 1,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Explain how a request is processed in Django?',
     startTime: '13:29',
@@ -433,8 +367,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 14,
-    day: 3,
-    dayIndex: 4,
+    day: 5,
+    dayIndex: 2,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'What is the difference between a project and an app in Django?',
     startTime: '18:25',
@@ -454,8 +388,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 15,
-    day: 3,
-    dayIndex: 5,
+    day: 5,
+    dayIndex: 3,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Which is the default database in the settings file in Django?',
     startTime: '22:33',
@@ -473,11 +407,9 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 4 (Questions 16 - 20) ---
   {
     id: 16,
-    day: 4,
+    day: 6,
     dayIndex: 1,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Why is Django called a loosely coupled framework?',
@@ -498,7 +430,7 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 17,
-    day: 4,
+    day: 6,
     dayIndex: 2,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Which is the default port for the Django development server?',
@@ -519,7 +451,7 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 18,
-    day: 4,
+    day: 6,
     dayIndex: 3,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Explain the Migration in Django.',
@@ -540,8 +472,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 19,
-    day: 4,
-    dayIndex: 4,
+    day: 7,
+    dayIndex: 1,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'What is Django ORM?',
     startTime: '26:31',
@@ -566,8 +498,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 20,
-    day: 4,
-    dayIndex: 5,
+    day: 7,
+    dayIndex: 2,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Explain how you can set up the Database in Django?',
     startTime: '28:24',
@@ -585,12 +517,10 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 5 (Questions 21 - 25) ---
   {
     id: 21,
-    day: 5,
-    dayIndex: 1,
+    day: 7,
+    dayIndex: 3,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'What do you mean by the CSRF Token?',
     startTime: '29:31',
@@ -615,8 +545,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 22,
-    day: 5,
-    dayIndex: 2,
+    day: 8,
+    dayIndex: 1,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'What is a QuerySet in Django?',
     startTime: '30:51',
@@ -636,8 +566,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 23,
-    day: 5,
-    dayIndex: 3,
+    day: 8,
+    dayIndex: 2,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Difference between select_related and prefetch_related in Django?',
     startTime: '31:32',
@@ -667,8 +597,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 24,
-    day: 5,
-    dayIndex: 4,
+    day: 8,
+    dayIndex: 3,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Difference between Emp.object.filter(), Emp.object.get() and Emp.objects.all() in Django Queryset?',
     startTime: '33:57',
@@ -688,8 +618,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 25,
-    day: 5,
-    dayIndex: 5,
+    day: 9,
+    dayIndex: 1,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'Which Companies Use Django?',
     startTime: '36:18',
@@ -707,12 +637,10 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 6 (Questions 26 - 30) ---
   {
     id: 26,
-    day: 6,
-    dayIndex: 1,
+    day: 9,
+    dayIndex: 2,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'How Static Files are defined in Django? Explain its Configuration and uses.',
     startTime: '36:37',
@@ -732,8 +660,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 27,
-    day: 6,
-    dayIndex: 2,
+    day: 9,
+    dayIndex: 3,
     partName: 'Part 2: Mostly Asked Questions',
     title: 'What is the difference between Flask, Pyramid, and Django?',
     startTime: '39:03',
@@ -753,8 +681,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 28,
-    day: 6,
-    dayIndex: 3,
+    day: 10,
+    dayIndex: 1,
     partName: 'Part 3: Common Questions',
     title: 'Give a brief about the Django admin.',
     startTime: '40:09',
@@ -774,8 +702,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 29,
-    day: 6,
-    dayIndex: 4,
+    day: 10,
+    dayIndex: 2,
     partName: 'Part 3: Common Questions',
     title: 'What databases are supported by Django?',
     startTime: '43:00',
@@ -795,8 +723,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 30,
-    day: 6,
-    dayIndex: 5,
+    day: 10,
+    dayIndex: 3,
     partName: 'Part 3: Common Questions',
     title: 'What are the advantages/disadvantages of using Django?',
     startTime: '43:33',
@@ -814,11 +742,9 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 7 (Questions 31 - 35) ---
   {
     id: 31,
-    day: 7,
+    day: 11,
     dayIndex: 1,
     partName: 'Part 3: Common Questions',
     title: 'What is the Django shortcut method to more easily render an HTML response?',
@@ -839,7 +765,7 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 32,
-    day: 7,
+    day: 11,
     dayIndex: 2,
     partName: 'Part 3: Common Questions',
     title: 'What is the difference between Authentication and Authorization in Django?',
@@ -860,7 +786,7 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 33,
-    day: 7,
+    day: 11,
     dayIndex: 3,
     partName: 'Part 3: Common Questions',
     title: 'What is django.shortcuts.render function?',
@@ -881,8 +807,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 34,
-    day: 7,
-    dayIndex: 4,
+    day: 12,
+    dayIndex: 1,
     partName: 'Part 3: Common Questions',
     title: 'Explain Q objects in Django ORM?',
     startTime: '50:23',
@@ -902,8 +828,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 35,
-    day: 7,
-    dayIndex: 5,
+    day: 12,
+    dayIndex: 2,
     partName: 'Part 3: Common Questions',
     title: 'What is the significance of the manage.py file in Django?',
     startTime: '51:36',
@@ -921,12 +847,10 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 8 (Questions 36 - 40) ---
   {
     id: 36,
-    day: 8,
-    dayIndex: 1,
+    day: 12,
+    dayIndex: 3,
     partName: 'Part 3: Common Questions',
     title: 'What is the use of the include function in the urls.py file in Django?',
     startTime: '52:23',
@@ -946,8 +870,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 37,
-    day: 8,
-    dayIndex: 2,
+    day: 13,
+    dayIndex: 1,
     partName: 'Part 3: Common Questions',
     title: 'What does {% include %} do in Django?',
     startTime: '54:31',
@@ -967,8 +891,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 38,
-    day: 8,
-    dayIndex: 3,
+    day: 13,
+    dayIndex: 2,
     partName: 'Part 3: Common Questions',
     title: 'What is Django Rest Framework(DRF)?',
     startTime: '55:41',
@@ -988,8 +912,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 39,
-    day: 8,
-    dayIndex: 4,
+    day: 13,
+    dayIndex: 3,
     partName: 'Part 3: Common Questions',
     title: 'What is a Middleware in Django?',
     startTime: '56:35',
@@ -1009,8 +933,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 40,
-    day: 8,
-    dayIndex: 5,
+    day: 14,
+    dayIndex: 1,
     partName: 'Part 3: Common Questions',
     title: 'What is a session in Django?',
     startTime: '57:45',
@@ -1028,12 +952,10 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 9 (Questions 41 - 45) ---
   {
     id: 41,
-    day: 9,
-    dayIndex: 1,
+    day: 14,
+    dayIndex: 2,
     partName: 'Part 3: Common Questions',
     title: 'What are Django Signals?',
     startTime: '58:19',
@@ -1053,8 +975,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 42,
-    day: 9,
-    dayIndex: 2,
+    day: 14,
+    dayIndex: 3,
     partName: 'Part 3: Common Questions',
     title: 'What is the context in Django?',
     startTime: '59:14',
@@ -1074,8 +996,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 43,
-    day: 9,
-    dayIndex: 3,
+    day: 15,
+    dayIndex: 1,
     partName: 'Part 3: Common Questions',
     title: 'What are Django exceptions?',
     startTime: '1:00:21',
@@ -1095,8 +1017,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 44,
-    day: 9,
-    dayIndex: 4,
+    day: 15,
+    dayIndex: 2,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'What happens if MyObject.objects.get() is called with parameters that do not match an existing item in the database?',
     startTime: '1:02:46',
@@ -1116,8 +1038,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 45,
-    day: 9,
-    dayIndex: 5,
+    day: 15,
+    dayIndex: 3,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'How to make a variable available to all the templates?',
     startTime: '1:04:02',
@@ -1135,11 +1057,9 @@ export const QUESTIONS_DATA = [
       }
     ]
   },
-
-  // --- DAY 10 (Questions 46 - 54) ---
   {
     id: 46,
-    day: 10,
+    day: 16,
     dayIndex: 1,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'Why does Django use regular expressions to define URLs? Is it necessary to use them?',
@@ -1160,7 +1080,7 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 47,
-    day: 10,
+    day: 16,
     dayIndex: 2,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'Difference between Django OneToOneField and ForeignKey Field?',
@@ -1186,7 +1106,7 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 48,
-    day: 10,
+    day: 16,
     dayIndex: 3,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'Briefly explain Django Field Class and its types',
@@ -1207,8 +1127,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 49,
-    day: 10,
-    dayIndex: 4,
+    day: 17,
+    dayIndex: 1,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'Explain how you can use file-based sessions?',
     startTime: '1:08:31',
@@ -1228,8 +1148,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 50,
-    day: 10,
-    dayIndex: 5,
+    day: 17,
+    dayIndex: 2,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'What is Jinja templating?',
     startTime: '1:08:41',
@@ -1249,8 +1169,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 51,
-    day: 10,
-    dayIndex: 6,
+    day: 17,
+    dayIndex: 3,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'What is serialization in Django?',
     startTime: '1:09:32',
@@ -1270,8 +1190,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 52,
-    day: 10,
-    dayIndex: 7,
+    day: 18,
+    dayIndex: 1,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'What are generic views?',
     startTime: '1:10:13',
@@ -1291,8 +1211,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 53,
-    day: 10,
-    dayIndex: 8,
+    day: 18,
+    dayIndex: 2,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'What is mixin?',
     startTime: '1:10:49',
@@ -1312,8 +1232,8 @@ export const QUESTIONS_DATA = [
   },
   {
     id: 54,
-    day: 10,
-    dayIndex: 9,
+    day: 18,
+    dayIndex: 3,
     partName: 'Part 4: Rarely / Advanced Questions',
     title: 'Explain the caching strategies in Django?',
     startTime: '1:11:29',
@@ -1341,7 +1261,7 @@ export const TRACKS_DATA = {
     icon: '⚡',
     videoId: DJANGO_VIDEO_ID,
     videoBaseUrl: DJANGO_VIDEO_BASE_URL,
-    days: DAYS_ROADMAP,
+    days: DJANGO_DAYS,
     questions: QUESTIONS_DATA,
     totalCount: 54,
   },

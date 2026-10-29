@@ -23,7 +23,7 @@ import {
 function FormattedSummary({ text }) {
   if (!text) return null;
 
-  const codeTokenRegex = /(\b(?:python|pip|django-admin|manage\.py|makemigrations|migrate|createsuperuser|inspectdb|collectstatic|runserver|select_related|prefetch_related|filter|get|all|create|save|update|delete|union|__init__|__new__|__mro__|__iter__|__next__|__enter__|__exit__|__add__|__sub__|self|super\(\)|yield|lambda|def|class|import|from|with|try|except|finally|break|continue|pass|PYTHONPATH|GIL|args|kwargs|read|write|open|close|pickle|dump|dumps|load|loads|copy|deepcopy|keys|items|values|split|range|xrange)\b(?:\([^)]*\))?|\[:[^:]*:?[^\]]*\]|\[\]|\{\})/g;
+  const codeTokenRegex = /(`[^`]+`|\b(?:python|pip|django-admin|manage\.py|makemigrations|migrate|createsuperuser|inspectdb|collectstatic|runserver|select_related|prefetch_related|filter|get|all|create|save|update|delete|union|__init__|__new__|__mro__|__iter__|__next__|__enter__|__exit__|__add__|__sub__|self|super|yield|lambda|def|class|import|from|with|try|except|finally|break|continue|pass|PYTHONPATH|GIL|args|kwargs|\*args|\*\*kwargs|read|write|open|close|pickle|dump|dumps|load|loads|copy|deepcopy|keys|items|values|split|range|xrange|join)\b(?:\([^)]*\))?|\[:[^:]*:?[^\]]*\]|\[\]|\{\})/g;
 
   const parts = text.split(codeTokenRegex);
 
@@ -32,12 +32,13 @@ function FormattedSummary({ text }) {
       {parts.map((part, i) => {
         if (!part) return null;
         if (part.match(codeTokenRegex)) {
+          const displayToken = part.startsWith('`') && part.endsWith('`') ? part.slice(1, -1) : part;
           return (
             <code 
               key={i} 
-              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded-md bg-zinc-900 text-amber-300 font-semibold border border-zinc-700 shadow-xs"
+              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded-md bg-zinc-900 text-amber-300 font-semibold border border-zinc-700/80 shadow-xs"
             >
-              {part}
+              {displayToken}
             </code>
           );
         }
@@ -277,7 +278,7 @@ export default function App() {
                 Backend Dev
               </strong>
               <small className="hidden sm:block text-muted text-[10px] leading-tight">
-                10-Day Mastery Roadmap
+                {currentTrack.days.length}-Day Roadmap • 3 Qs / Day
               </small>
             </div>
           </div>
@@ -641,12 +642,14 @@ export default function App() {
         {/* Motivational Habit Footer Banner */}
         <div className="comback-card p-3.5 text-xs text-muted flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-ink flex-shrink-0" />
+            <Flame className="w-4 h-4 text-amber-500 flex-shrink-0" />
             <span>
-              <strong>Pace:</strong> 5 questions each day. Finish all {currentTrack.totalCount} {currentTrack.name} questions in 10 days!
+              <strong>Pace:</strong> 3 questions each day. Finish all {currentTrack.totalCount} {currentTrack.name} questions in {currentTrack.days.length} days!
             </span>
           </div>
-          <span className="text-ink font-bold font-mono text-xs flex-shrink-0">Day {currentQuestion.day}/10</span>
+          <span className="text-ink font-bold font-mono text-xs flex-shrink-0">
+            Day {currentQuestion.day}/{currentTrack.days.length}
+          </span>
         </div>
 
       </main>

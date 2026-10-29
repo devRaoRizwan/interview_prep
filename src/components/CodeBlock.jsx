@@ -137,3 +137,4 @@ export default function CodeBlock({ code, language = 'bash', label = 'COMMAND / 
     </div>
   );
 }
+

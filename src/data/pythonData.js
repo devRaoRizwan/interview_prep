@@ -2,20 +2,26 @@ export const PYTHON_VIDEO_ID = 'YeupGcOW-3k';
 export const PYTHON_VIDEO_BASE_URL = 'https://www.youtube.com/watch?v=YeupGcOW-3k';
 
 export const PYTHON_DAYS = [
-  { day: 1, title: 'Lists, Tuples, Decorators & Memory', questionIds: [1, 2, 3, 4, 5] },
-  { day: 2, title: 'Init, Modules, Ranges & Mutability', questionIds: [6, 7, 8, 9, 10] },
-  { day: 3, title: 'Ternary, OOP Inheritance & Variables', questionIds: [11, 12, 13, 14, 15] },
-  { day: 4, title: 'Pickling, Data Functions & Args/Kwargs', questionIds: [16, 17, 18, 19, 20] },
-  { day: 5, title: 'File I/O, Exceptions & Python Versions', questionIds: [21, 22, 23, 24, 25] },
-  { day: 6, title: 'PIP, Formatting, Dictionaries & OOP', questionIds: [26, 27, 28, 29, 30] },
-  { day: 7, title: 'Multiple Inheritance, Slicing & Bytecode', questionIds: [31, 32, 33, 34, 35] },
-  { day: 8, title: 'Arrays vs Lists, Name Mangling & Lambdas', questionIds: [36, 37, 38, 39, 40] },
-  { day: 9, title: 'Multiprocessing, GIL, Scopes & Recursion', questionIds: [41, 42, 43, 44, 45] },
-  { day: 10, title: 'Unittests, Copying, Dunder & Monkey Patching', questionIds: [46, 47, 48, 49, 50, 51] },
+  { day: 1, title: 'Lists, Tuples & Comprehensions', questionIds: [1, 2, 3] },
+  { day: 2, title: 'Memory, Generators & OOP __init__', questionIds: [4, 5, 6] },
+  { day: 3, title: 'Modules, Ranges & Generator Examples', questionIds: [7, 8, 9] },
+  { day: 4, title: 'Mutability, Ternary & Inheritance', questionIds: [10, 11, 12] },
+  { day: 5, title: 'Variable Scope, Control Flow & self', questionIds: [13, 14, 15] },
+  { day: 6, title: 'Pickling, Collections & Iterators', questionIds: [16, 17, 18] },
+  { day: 7, title: 'Type Casting, *args/**kwargs & With', questionIds: [19, 20, 21] },
+  { day: 8, title: 'File I/O, PYTHONPATH & Exceptions', questionIds: [22, 23, 24] },
+  { day: 9, title: 'Python 2 vs 3, PIP & Ecosystem', questionIds: [25, 26, 27] },
+  { day: 10, title: 'F-Strings, Dictionaries & OOP Concepts', questionIds: [28, 29, 30] },
+  { day: 11, title: 'Diamond Problem, Empty Types & Bytecode', questionIds: [31, 32, 33] },
+  { day: 12, title: 'Slicing, Tuples & Arrays vs Lists', questionIds: [34, 35, 36] },
+  { day: 13, title: 'Naming Conventions, Input & Dict Copies', questionIds: [37, 38, 39] },
+  { day: 14, title: 'Lambdas, Concurrency & The GIL', questionIds: [40, 41, 42] },
+  { day: 15, title: 'Classes, LEGB Scopes & Recursion', questionIds: [43, 44, 45] },
+  { day: 16, title: 'Unit Testing, Functional Tools & Copies', questionIds: [46, 47, 48] },
+  { day: 17, title: 'Monkey Patching, Dunder & Interview Tips', questionIds: [49, 50, 51] },
 ];
 
 export const PYTHON_QUESTIONS = [
-  // DAY 1
   {
     id: 1,
     day: 1,
@@ -65,8 +71,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 4,
-    day: 1,
-    dayIndex: 4,
+    day: 2,
+    dayIndex: 1,
     title: 'Memory Management in Python',
     startTime: '8:12',
     endTime: '9:38',
@@ -81,8 +87,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 5,
-    day: 1,
-    dayIndex: 5,
+    day: 2,
+    dayIndex: 2,
     title: 'Difference Between Generators and Iterators',
     startTime: '9:38',
     endTime: '11:18',
@@ -94,12 +100,10 @@ export const PYTHON_QUESTIONS = [
       { title: 'How to Use Generators and yield in Python', url: 'https://realpython.com/introduction-to-python-generators/', source: 'Real Python' }
     ]
   },
-
-  // DAY 2
   {
     id: 6,
     day: 2,
-    dayIndex: 1,
+    dayIndex: 3,
     title: "What is the '__init__' keyword?",
     startTime: '11:18',
     endTime: '13:01',
@@ -113,8 +117,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 7,
-    day: 2,
-    dayIndex: 2,
+    day: 3,
+    dayIndex: 1,
     title: 'Difference Between Modules and Packages',
     startTime: '13:01',
     endTime: '14:28',
@@ -128,8 +132,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 8,
-    day: 2,
-    dayIndex: 3,
+    day: 3,
+    dayIndex: 2,
     title: 'Difference Between Range and Xrange',
     startTime: '14:28',
     endTime: '16:21',
@@ -143,8 +147,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 9,
-    day: 2,
-    dayIndex: 4,
+    day: 3,
+    dayIndex: 3,
     title: 'Generators Explained with Example',
     startTime: '16:21',
     endTime: '16:48',
@@ -158,8 +162,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 10,
-    day: 2,
-    dayIndex: 5,
+    day: 4,
+    dayIndex: 1,
     title: 'Inbuilt Data Types / Mutable and Immutable',
     startTime: '16:48',
     endTime: '18:43',
@@ -171,12 +175,10 @@ export const PYTHON_QUESTIONS = [
       { title: 'Built-in Types in Python', url: 'https://docs.python.org/3/library/stdtypes.html', source: 'Python Docs' }
     ]
   },
-
-  // DAY 3
   {
     id: 11,
-    day: 3,
-    dayIndex: 1,
+    day: 4,
+    dayIndex: 2,
     title: 'Ternary Operator in Python',
     startTime: '18:43',
     endTime: '19:42',
@@ -190,8 +192,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 12,
-    day: 3,
-    dayIndex: 2,
+    day: 4,
+    dayIndex: 3,
     title: 'Inheritance in Python',
     startTime: '19:42',
     endTime: '21:46',
@@ -205,8 +207,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 13,
-    day: 3,
-    dayIndex: 3,
+    day: 5,
+    dayIndex: 1,
     title: 'Local Variable vs Global Variable',
     startTime: '21:46',
     endTime: '23:31',
@@ -220,8 +222,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 14,
-    day: 3,
-    dayIndex: 4,
+    day: 5,
+    dayIndex: 2,
     title: 'Break, Continue and Pass Statements',
     startTime: '23:31',
     endTime: '25:51',
@@ -235,8 +237,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 15,
-    day: 3,
-    dayIndex: 5,
+    day: 5,
+    dayIndex: 3,
     title: "What is the 'self' keyword?",
     startTime: '25:51',
     endTime: '27:27',
@@ -248,11 +250,9 @@ export const PYTHON_QUESTIONS = [
       { title: 'Classes in Python Documentation', url: 'https://docs.python.org/3/tutorial/classes.html', source: 'Python Docs' }
     ]
   },
-
-  // DAY 4
   {
     id: 16,
-    day: 4,
+    day: 6,
     dayIndex: 1,
     title: 'Pickling and Unpickling in Python',
     startTime: '27:27',
@@ -267,7 +267,7 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 17,
-    day: 4,
+    day: 6,
     dayIndex: 2,
     title: 'Builtin Functions of List, Set, Tuple and Dictionary',
     startTime: '28:38',
@@ -282,7 +282,7 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 18,
-    day: 4,
+    day: 6,
     dayIndex: 3,
     title: 'What are Python Iterators?',
     startTime: '31:09',
@@ -297,8 +297,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 19,
-    day: 4,
-    dayIndex: 4,
+    day: 7,
+    dayIndex: 1,
     title: 'Type Conversion in Python (Implicit vs Explicit)',
     startTime: '31:32',
     endTime: '34:14',
@@ -312,8 +312,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 20,
-    day: 4,
-    dayIndex: 5,
+    day: 7,
+    dayIndex: 2,
     title: '*args and **kwargs Explained',
     startTime: '34:14',
     endTime: '36:45',
@@ -325,12 +325,10 @@ export const PYTHON_QUESTIONS = [
       { title: 'Python *args and **kwargs Demystified', url: 'https://realpython.com/python-kwargs-and-args/', source: 'Real Python' }
     ]
   },
-
-  // DAY 5
   {
     id: 21,
-    day: 5,
-    dayIndex: 1,
+    day: 7,
+    dayIndex: 3,
     title: 'Open and With Statements (Context Managers)',
     startTime: '36:45',
     endTime: '38:41',
@@ -344,8 +342,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 22,
-    day: 5,
-    dayIndex: 2,
+    day: 8,
+    dayIndex: 1,
     title: 'File Read and Write Operations in Python',
     startTime: '38:41',
     endTime: '40:35',
@@ -359,8 +357,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 23,
-    day: 5,
-    dayIndex: 3,
+    day: 8,
+    dayIndex: 2,
     title: 'What is PYTHONPATH?',
     startTime: '40:35',
     endTime: '41:15',
@@ -374,8 +372,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 24,
-    day: 5,
-    dayIndex: 4,
+    day: 8,
+    dayIndex: 3,
     title: 'Exception Handling (Try, Except, Else, Finally)',
     startTime: '41:15',
     endTime: '43:28',
@@ -389,8 +387,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 25,
-    day: 5,
-    dayIndex: 5,
+    day: 9,
+    dayIndex: 1,
     title: 'Difference Between Python 2.0 & 3.0',
     startTime: '43:28',
     endTime: '44:52',
@@ -402,12 +400,10 @@ export const PYTHON_QUESTIONS = [
       { title: 'What is New in Python 3.0', url: 'https://docs.python.org/3/whatsnew/3.0.html', source: 'Python Docs' }
     ]
   },
-
-  // DAY 6
   {
     id: 26,
-    day: 6,
-    dayIndex: 1,
+    day: 9,
+    dayIndex: 2,
     title: 'What is PIP in Python?',
     startTime: '44:52',
     endTime: '45:46',
@@ -421,8 +417,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 27,
-    day: 6,
-    dayIndex: 2,
+    day: 9,
+    dayIndex: 3,
     title: 'Common Uses and Applications of Python',
     startTime: '45:46',
     endTime: '46:11',
@@ -436,8 +432,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 28,
-    day: 6,
-    dayIndex: 3,
+    day: 10,
+    dayIndex: 1,
     title: 'F-strings and String Formatting in Python',
     startTime: '46:11',
     endTime: '47:36',
@@ -451,8 +447,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 29,
-    day: 6,
-    dayIndex: 4,
+    day: 10,
+    dayIndex: 2,
     title: 'How to Get All Keys from a Dictionary',
     startTime: '47:36',
     endTime: '49:18',
@@ -466,8 +462,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 30,
-    day: 6,
-    dayIndex: 5,
+    day: 10,
+    dayIndex: 3,
     title: 'Abstraction vs Encapsulation in Python',
     startTime: '49:18',
     endTime: '50:12',
@@ -479,11 +475,9 @@ export const PYTHON_QUESTIONS = [
       { title: 'Object-Oriented Programming in Python', url: 'https://realpython.com/python3-object-oriented-programming/', source: 'Real Python' }
     ]
   },
-
-  // DAY 7
   {
     id: 31,
-    day: 7,
+    day: 11,
     dayIndex: 1,
     title: 'Multiple Inheritance & The Diamond Problem',
     startTime: '50:12',
@@ -498,7 +492,7 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 32,
-    day: 7,
+    day: 11,
     dayIndex: 2,
     title: 'Initialize Empty List, Tuple, Dict or Set',
     startTime: '52:12',
@@ -513,7 +507,7 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 33,
-    day: 7,
+    day: 11,
     dayIndex: 3,
     title: 'Difference Between .py and .pyc Files',
     startTime: '53:11',
@@ -528,8 +522,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 34,
-    day: 7,
-    dayIndex: 4,
+    day: 12,
+    dayIndex: 1,
     title: 'Slicing and [::-1] in Python',
     startTime: '54:08',
     endTime: '59:34',
@@ -543,8 +537,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 35,
-    day: 7,
-    dayIndex: 5,
+    day: 12,
+    dayIndex: 2,
     title: 'Concatenating Tuples in Python',
     startTime: '59:34',
     endTime: '1:04:21',
@@ -556,12 +550,10 @@ export const PYTHON_QUESTIONS = [
       { title: 'Common Sequence Operations in Python', url: 'https://docs.python.org/3/library/stdtypes.html#common-sequence-operations', source: 'Python Docs' }
     ]
   },
-
-  // DAY 8
   {
     id: 36,
-    day: 8,
-    dayIndex: 1,
+    day: 12,
+    dayIndex: 3,
     title: 'Arrays vs Lists in Python',
     startTime: '1:04:21',
     endTime: '1:05:25',
@@ -575,8 +567,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 37,
-    day: 8,
-    dayIndex: 2,
+    day: 13,
+    dayIndex: 1,
     title: 'Difference Between _a, __a and __a__ in Python',
     startTime: '1:05:25',
     endTime: '1:07:07',
@@ -590,8 +582,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 38,
-    day: 8,
-    dayIndex: 3,
+    day: 13,
+    dayIndex: 2,
     title: 'Reading Multiple Values from Input (split)',
     startTime: '1:07:07',
     endTime: '1:08:14',
@@ -605,8 +597,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 39,
-    day: 8,
-    dayIndex: 4,
+    day: 13,
+    dayIndex: 3,
     title: 'How to Copy and Delete a Dictionary in Python',
     startTime: '1:08:14',
     endTime: '1:11:12',
@@ -620,8 +612,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 40,
-    day: 8,
-    dayIndex: 5,
+    day: 14,
+    dayIndex: 1,
     title: 'Anonymous and Lambda Functions in Python',
     startTime: '1:11:12',
     endTime: '1:14:04',
@@ -633,12 +625,10 @@ export const PYTHON_QUESTIONS = [
       { title: 'How to Use Python Lambda Functions', url: 'https://realpython.com/python-lambda/', source: 'Real Python' }
     ]
   },
-
-  // DAY 9
   {
     id: 41,
-    day: 9,
-    dayIndex: 1,
+    day: 14,
+    dayIndex: 2,
     title: 'Multiprocessing vs Multithreading in Python',
     startTime: '1:14:04',
     endTime: '1:15:52',
@@ -652,8 +642,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 42,
-    day: 9,
-    dayIndex: 2,
+    day: 14,
+    dayIndex: 3,
     title: 'What is the GIL (Global Interpreter Lock)?',
     startTime: '1:15:52',
     endTime: '1:17:01',
@@ -667,8 +657,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 43,
-    day: 9,
-    dayIndex: 3,
+    day: 15,
+    dayIndex: 1,
     title: 'Class and Object Creation in Python',
     startTime: '1:17:01',
     endTime: '1:17:54',
@@ -682,8 +672,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 44,
-    day: 9,
-    dayIndex: 4,
+    day: 15,
+    dayIndex: 2,
     title: 'Namespace and Scope Resolution (LEGB Rule)',
     startTime: '1:17:54',
     endTime: '1:20:01',
@@ -697,8 +687,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 45,
-    day: 9,
-    dayIndex: 5,
+    day: 15,
+    dayIndex: 3,
     title: 'Recursion in Python (Reversing a List)',
     startTime: '1:20:01',
     endTime: '1:21:13',
@@ -710,11 +700,9 @@ export const PYTHON_QUESTIONS = [
       { title: 'Thinking Recursively in Python', url: 'https://realpython.com/python-thinking-recursively/', source: 'Real Python' }
     ]
   },
-
-  // DAY 10
   {
     id: 46,
-    day: 10,
+    day: 16,
     dayIndex: 1,
     title: 'Unittests in Python (unittest Module)',
     startTime: '1:21:13',
@@ -729,7 +717,7 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 47,
-    day: 10,
+    day: 16,
     dayIndex: 2,
     title: 'Map, Filter and Reduce in Python',
     startTime: '1:22:28',
@@ -744,7 +732,7 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 48,
-    day: 10,
+    day: 16,
     dayIndex: 3,
     title: 'Shallow Copy vs Deep Copy in Python',
     startTime: '1:23:16',
@@ -759,8 +747,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 49,
-    day: 10,
-    dayIndex: 4,
+    day: 17,
+    dayIndex: 1,
     title: 'Object Copying and Monkey Patching',
     startTime: '1:24:28',
     endTime: '1:25:04',
@@ -774,8 +762,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 50,
-    day: 10,
-    dayIndex: 5,
+    day: 17,
+    dayIndex: 2,
     title: 'Operator Overloading & Dunder Methods in Python',
     startTime: '1:25:04',
     endTime: '1:26:35',
@@ -789,8 +777,8 @@ export const PYTHON_QUESTIONS = [
   },
   {
     id: 51,
-    day: 10,
-    dayIndex: 6,
+    day: 17,
+    dayIndex: 3,
     title: 'Bonus Tip: Coding Patterns & Graph Algorithms',
     startTime: '1:24:44',
     endTime: '1:26:35',
