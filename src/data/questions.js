@@ -1,30 +1,26 @@
-export const VIDEO_ID = 'hMwGWqyIKEs';
-export const VIDEO_BASE_URL = 'https://www.youtube.com/watch?v=hMwGWqyIKEs';
+import { PYTHON_QUESTIONS, PYTHON_DAYS, PYTHON_VIDEO_ID, PYTHON_VIDEO_BASE_URL } from './pythonData';
+
+export const DJANGO_VIDEO_ID = 'hMwGWqyIKEs';
+export const DJANGO_VIDEO_BASE_URL = 'https://www.youtube.com/watch?v=hMwGWqyIKEs';
+
+// Keep legacy exports for backward compatibility
+export const VIDEO_ID = DJANGO_VIDEO_ID;
+export const VIDEO_BASE_URL = DJANGO_VIDEO_BASE_URL;
 
 export const TRACKS = [
   {
     id: 'django',
-    name: 'Django Framework',
-    shortName: 'Django',
-    subtitle: '54 Questions • 10-Day Plan',
-    status: 'active',
+    name: 'Django',
+    fullName: 'Django Framework',
+    badge: '54 Questions • 10 Days',
     icon: '⚡',
   },
   {
     id: 'python',
-    name: 'Python Core',
-    shortName: 'Python',
-    subtitle: 'OOP, GIL, Memory & Async',
-    status: 'upcoming',
+    name: 'Python',
+    fullName: 'Python Core & Advanced',
+    badge: '51 Questions • 10 Days',
     icon: '🐍',
-  },
-  {
-    id: 'sql',
-    name: 'SQL & Databases',
-    shortName: 'SQL',
-    subtitle: 'Queries, Indexing & Joins',
-    status: 'upcoming',
-    icon: '🗄️',
   },
 ];
 
@@ -1336,3 +1332,29 @@ export const QUESTIONS_DATA = [
     ]
   }
 ];
+
+export const TRACKS_DATA = {
+  django: {
+    id: 'django',
+    name: 'Django',
+    fullName: 'Django Framework',
+    icon: '⚡',
+    videoId: DJANGO_VIDEO_ID,
+    videoBaseUrl: DJANGO_VIDEO_BASE_URL,
+    days: DAYS_ROADMAP,
+    questions: QUESTIONS_DATA,
+    totalCount: 54,
+  },
+  python: {
+    id: 'python',
+    name: 'Python',
+    fullName: 'Python Core & Advanced',
+    icon: '🐍',
+    videoId: PYTHON_VIDEO_ID,
+    videoBaseUrl: PYTHON_VIDEO_BASE_URL,
+    days: PYTHON_DAYS,
+    questions: PYTHON_QUESTIONS,
+    totalCount: 51,
+  },
+};
+

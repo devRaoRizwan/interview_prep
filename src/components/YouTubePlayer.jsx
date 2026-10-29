@@ -9,6 +9,8 @@ import { VIDEO_ID, VIDEO_BASE_URL } from '../data/questions';
 
 export default function YouTubePlayer({
   currentQuestion,
+  videoId = VIDEO_ID,
+  videoBaseUrl = VIDEO_BASE_URL,
   onSegmentEnd,
   loopMode,
   setLoopMode
@@ -54,7 +56,7 @@ export default function YouTubePlayer({
 
     try {
       playerRef.current = new window.YT.Player('yt-single-player', {
-        videoId: VIDEO_ID,
+        videoId: videoId,
         playerVars: {
           start: currentQuestion.startSeconds,
           end: currentQuestion.endSeconds,
@@ -67,7 +69,7 @@ export default function YouTubePlayer({
           onReady: (event) => {
             try {
               event.target.loadVideoById({
-                videoId: VIDEO_ID,
+                videoId: videoId,
                 startSeconds: currentQuestion.startSeconds,
                 endSeconds: currentQuestion.endSeconds,
               });
@@ -111,7 +113,7 @@ export default function YouTubePlayer({
     if (playerRef.current && playerRef.current.loadVideoById) {
       try {
         playerRef.current.loadVideoById({
-          videoId: VIDEO_ID,
+          videoId: videoId,
           startSeconds: currentQuestion.startSeconds,
           endSeconds: currentQuestion.endSeconds,
         });
@@ -217,7 +219,7 @@ export default function YouTubePlayer({
         ) : (
           <iframe
             key={iframeFallbackKey}
-            src={`https://www.youtube.com/embed/${VIDEO_ID}?start=${currentQuestion.startSeconds}&end=${currentQuestion.endSeconds}&autoplay=1&rel=0&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${videoId}?start=${currentQuestion.startSeconds}&end=${currentQuestion.endSeconds}&autoplay=1&rel=0&modestbranding=1`}
             title={currentQuestion.title}
             className="absolute inset-0 w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -302,7 +304,7 @@ export default function YouTubePlayer({
 
           {/* External Link */}
           <a
-            href={`${VIDEO_BASE_URL}&t=${currentQuestion.startSeconds}s`}
+            href={`${videoBaseUrl}&t=${currentQuestion.startSeconds}s`}
             target="_blank"
             rel="noopener noreferrer"
             title="Open on YouTube at this exact timestamp"
