@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   QUESTIONS_DATA, 
   DAYS_ROADMAP,
+  TRACKS,
   VIDEO_BASE_URL 
 } from './data/questions';
 import YouTubePlayer from './components/YouTubePlayer';
@@ -18,13 +19,17 @@ import {
   Clock,
   Menu,
   X,
-  BookOpen
+  BookOpen,
+  Code2,
+  Database,
+  ArrowRight
 } from 'lucide-react';
 
-const STORAGE_KEY_COMPLETED = 'django_10day_completed_v4';
-const STORAGE_KEY_NOTES = 'django_10day_notes_v4';
-const STORAGE_KEY_LAST_ID = 'django_10day_last_id_v4';
-const STORAGE_KEY_STRICT_LOCK = 'django_10day_strict_lock_v4';
+const STORAGE_KEY_COMPLETED = 'backend_dev_completed_v1';
+const STORAGE_KEY_NOTES = 'backend_dev_notes_v1';
+const STORAGE_KEY_LAST_ID = 'backend_dev_last_id_v1';
+const STORAGE_KEY_STRICT_LOCK = 'backend_dev_strict_lock_v1';
+const STORAGE_KEY_TRACK = 'backend_dev_active_track_v1';
 
 export default function App() {
   // Completed questions map { [id]: boolean }
@@ -70,12 +75,28 @@ export default function App() {
     return 1;
   });
 
+  const [activeTrack, setActiveTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_TRACK);
+      return saved || 'django';
+    } catch {
+      return 'django';
+    }
+  });
+
   const [loopMode, setLoopMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [currentNote, setCurrentNote] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Persist states
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_TRACK, activeTrack);
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [activeTrack]);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify(completedMap));
@@ -213,6 +234,33 @@ export default function App() {
             </div>
           </div>
 
+          {/* Learning Tracks Switcher */}
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-1.5 px-0.5">
+              BACKEND TRACKS
+            </p>
+            <div className="grid grid-cols-3 gap-1 p-1 bg-paper-muted border border-line rounded-xl">
+              {TRACKS.map((t) => {
+                const isCurrent = activeTrack === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setActiveTrack(t.id)}
+                    className={`py-1.5 px-1 rounded-lg text-xs font-bold transition-all text-center flex flex-col items-center gap-0.5 ${
+                      isCurrent
+                        ? 'comback-primary-btn shadow-subtle'
+                        : 'text-muted hover:text-ink hover:bg-white/60'
+                    }`}
+                  >
+                    <span className="text-sm leading-none">{t.icon}</span>
+                    <span className="text-[11px] truncate w-full">{t.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Roadmap Card (comback2026 journey-card) */}
           <section className="comback-card p-4">
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
@@ -334,6 +382,28 @@ export default function App() {
                 </button>
               </div>
 
+              {/* Mobile Tracks Switcher */}
+              <div className="grid grid-cols-3 gap-1 p-1 bg-paper-muted border border-line rounded-xl">
+                {TRACKS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTrack(t.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`py-1.5 px-1 rounded-lg text-xs font-bold transition-all text-center flex flex-col items-center gap-0.5 ${
+                      activeTrack === t.id
+                        ? 'comback-primary-btn shadow-subtle'
+                        : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    <span className="text-sm leading-none">{t.icon}</span>
+                    <span className="text-[11px] truncate w-full">{t.shortName}</span>
+                  </button>
+                ))}
+              </div>
+
               {/* Progress summary */}
               <div className="comback-card p-3">
                 <p className="text-[10px] font-extrabold uppercase text-muted m-0">OVERALL PROGRESS</p>
@@ -411,106 +481,211 @@ export default function App() {
           </div>
 
           {/* Desktop Heading Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
-                BACKEND DEV INTERVIEW PREP • 10-DAY ROADMAP
-              </p>
-              <h1 className="m-0 mt-0.5 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
-                Day {currentDayInfo.day}: {currentDayInfo.title}
-              </h1>
-            </div>
+          {activeTrack === 'django' ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
+                    BACKEND DEV JOURNEY • DJANGO TRACK (10 DAYS)
+                  </p>
+                  <h1 className="m-0 mt-0.5 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
+                    Day {currentDayInfo.day}: {currentDayInfo.title}
+                  </h1>
+                </div>
 
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-1.5 rounded-lg border border-line bg-paper-muted text-xs flex items-center gap-2 shadow-subtle">
-                <span className="font-bold text-ink">Day Progress:</span>
-                <span className="font-mono text-muted">{completedInCurrentDay}/{questionsInCurrentDay.length} ({dayPercent}%)</span>
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1.5 rounded-lg border border-line bg-paper-muted text-xs flex items-center gap-2 shadow-subtle">
+                    <span className="font-bold text-ink">Day Progress:</span>
+                    <span className="font-mono text-muted">{completedInCurrentDay}/{questionsInCurrentDay.length} ({dayPercent}%)</span>
+                  </div>
+                </div>
               </div>
+
+              {/* 10-Days Horizontal Chips (comback2026 date-chips style) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
+                {DAYS_ROADMAP.map((d) => {
+                  const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
+                  const done = dayQuestions.filter((q) => !!completedMap[q.id]).length;
+                  const isSelected = currentQuestion.day === d.day;
+                  const isComplete = done === dayQuestions.length;
+                  const isUnlocked = isQuestionUnlocked(dayQuestions[0].id);
+
+                  return (
+                    <button
+                      key={d.day}
+                      type="button"
+                      onClick={() => handleSelectDay(d.day)}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'comback-primary-btn'
+                          : isComplete
+                          ? 'comback-completed-btn'
+                          : !isUnlocked
+                          ? 'border-line bg-paper-muted text-muted/50 cursor-not-allowed opacity-75'
+                          : 'comback-button'
+                      }`}
+                    >
+                      <span>Day {d.day}</span>
+                      {isComplete ? (
+                        <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
+                      ) : !isUnlocked ? (
+                        <Lock className="w-2.5 h-2.5 opacity-60" />
+                      ) : (
+                        <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-muted'}`}>
+                          {done}/{dayQuestions.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Question Step Pills in Current Day */}
+              <div className="mt-2.5 pt-2.5 border-t border-line flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex-shrink-0">
+                  Day {currentQuestion.day} Questions:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {questionsInCurrentDay.map((q, idx) => {
+                    const isSelected = currentQuestion.id === q.id;
+                    const isDone = !!completedMap[q.id];
+                    const isUnlocked = isQuestionUnlocked(q.id);
+
+                    return (
+                      <button
+                        key={q.id}
+                        type="button"
+                        disabled={!isUnlocked}
+                        onClick={() => setActiveQuestionId(q.id)}
+                        className={`h-7 px-2.5 rounded-lg border text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'comback-primary-btn'
+                            : isDone
+                            ? 'comback-completed-btn'
+                            : !isUnlocked
+                            ? 'border-line bg-paper-muted text-muted/40 cursor-not-allowed'
+                            : 'comback-button'
+                        }`}
+                      >
+                        {isDone ? (
+                          <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
+                        ) : !isUnlocked ? (
+                          <Lock className="w-2.5 h-2.5 opacity-40" />
+                        ) : (
+                          <span>Q{idx + 1}</span>
+                        )}
+                        <span className="text-[11px] opacity-80">Q#{q.id}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
+                  BACKEND DEV JOURNEY • {activeTrack.toUpperCase()} TRACK
+                </p>
+                <h1 className="m-0 mt-0.5 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight">
+                  {activeTrack === 'python' ? 'Python Core & Advanced Roadmap' : 'SQL & Database Systems Roadmap'}
+                </h1>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTrack('django')}
+                className="comback-button h-8 px-3 text-xs flex items-center gap-1.5 font-bold"
+              >
+                <span>← Back to Django Track</span>
+              </button>
             </div>
-          </div>
-
-          {/* 10-Days Horizontal Chips (comback2026 date-chips style) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
-            {DAYS_ROADMAP.map((d) => {
-              const dayQuestions = QUESTIONS_DATA.filter((q) => q.day === d.day);
-              const done = dayQuestions.filter((q) => !!completedMap[q.id]).length;
-              const isSelected = currentQuestion.day === d.day;
-              const isComplete = done === dayQuestions.length;
-              const isUnlocked = isQuestionUnlocked(dayQuestions[0].id);
-
-              return (
-                <button
-                  key={d.day}
-                  type="button"
-                  onClick={() => handleSelectDay(d.day)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'comback-primary-btn'
-                      : isComplete
-                      ? 'comback-completed-btn'
-                      : !isUnlocked
-                      ? 'border-line bg-paper-muted text-muted/50 cursor-not-allowed opacity-75'
-                      : 'comback-button'
-                  }`}
-                >
-                  <span>Day {d.day}</span>
-                  {isComplete ? (
-                    <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
-                  ) : !isUnlocked ? (
-                    <Lock className="w-2.5 h-2.5 opacity-60" />
-                  ) : (
-                    <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-muted'}`}>
-                      {done}/{dayQuestions.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Question Step Pills in Current Day */}
-          <div className="mt-2.5 pt-2.5 border-t border-line flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider flex-shrink-0">
-              Day {currentQuestion.day} Questions:
-            </span>
-            <div className="flex items-center gap-1.5">
-              {questionsInCurrentDay.map((q, idx) => {
-                const isSelected = currentQuestion.id === q.id;
-                const isDone = !!completedMap[q.id];
-                const isUnlocked = isQuestionUnlocked(q.id);
-
-                return (
-                  <button
-                    key={q.id}
-                    type="button"
-                    disabled={!isUnlocked}
-                    onClick={() => setActiveQuestionId(q.id)}
-                    className={`h-7 px-2.5 rounded-lg border text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'comback-primary-btn'
-                        : isDone
-                        ? 'comback-completed-btn'
-                        : !isUnlocked
-                        ? 'border-line bg-paper-muted text-muted/40 cursor-not-allowed'
-                        : 'comback-button'
-                    }`}
-                  >
-                    {isDone ? (
-                      <Check className={`w-3 h-3 stroke-[2.5] ${isSelected ? 'text-white' : 'text-signal-ink'}`} />
-                    ) : !isUnlocked ? (
-                      <Lock className="w-2.5 h-2.5 opacity-40" />
-                    ) : (
-                      <span>Q{idx + 1}</span>
-                    )}
-                    <span className="text-[11px] opacity-80">Q#{q.id}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </header>
 
-        {/* FOCUSED SINGLE VIDEO STATION CONTAINER */}
+        {/* TRACK VIEW */}
+        {activeTrack !== 'django' ? (
+          <div className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+            <section className="comback-card p-6 sm:p-8 space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-paper-muted border border-line flex items-center justify-center text-2xl shadow-subtle flex-shrink-0">
+                  {activeTrack === 'python' ? '🐍' : '🗄️'}
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-signal-ink bg-signal-pale border border-signal-border px-2 py-0.5 rounded">
+                    PLANNED TRACK
+                  </span>
+                  <h2 className="m-0 mt-1.5 font-heading font-extrabold text-2xl text-ink tracking-tight">
+                    {activeTrack === 'python' ? 'Python Core & Advanced Track' : 'SQL & Database Systems Track'}
+                  </h2>
+                  <p className="m-0 mt-1 text-xs text-muted">
+                    {activeTrack === 'python' 
+                      ? 'Structured questions and deep-dive interview topics for Python backend developers.' 
+                      : 'Relational database questions, indexing, query optimization, and schema design.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-line bg-white shadow-subtle space-y-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted m-0">
+                  10-DAY CURRICULUM SYLLABUS
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {activeTrack === 'python' ? (
+                    <>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 1–3: Core & OOP</strong>
+                        <p className="text-muted mt-0.5">Mutable vs immutable, dunder methods, MRO, inheritance, and properties.</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 4–6: Memory & Iterators</strong>
+                        <p className="text-muted mt-0.5">Generators, iterators, garbage collection, reference counting, and weakrefs.</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 7–8: GIL & Concurrency</strong>
+                        <p className="text-muted mt-0.5">Global Interpreter Lock, multiprocessing, threading, and asyncio event loops.</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 9–10: Metaprogramming</strong>
+                        <p className="text-muted mt-0.5">Decorators with arguments, metaclasses, context managers, and type hints.</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 1–3: Queries & Aggregations</strong>
+                        <p className="text-muted mt-0.5">Complex SELECT, HAVING vs WHERE, GROUP BY, and aggregate functions.</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 4–6: Joins & Window Functions</strong>
+                        <p className="text-muted mt-0.5">INNER, LEFT, RIGHT, FULL OUTER joins, CTEs, ROW_NUMBER, and RANK.</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 7–8: Indexing & Performance</strong>
+                        <p className="text-muted mt-0.5">B-Trees vs Hash indexes, composite indexes, EXPLAIN ANALYZE, and query optimization.</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-line bg-paper-muted">
+                        <strong className="block text-ink font-heading font-bold">Days 9–10: Transactions & ACID</strong>
+                        <p className="text-muted mt-0.5">ACID properties, isolation levels (dirty reads, phantom reads), locks, and deadlocks.</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTrack('django')}
+                  className="comback-primary-btn px-4 py-2.5 text-xs flex items-center gap-2"
+                >
+                  <span>Practice Django Track (54 Questions Ready)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : (
+        /* FOCUSED SINGLE VIDEO STATION CONTAINER */
         <div className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
           
           {/* Main Card (comback-card style with clean borders) */}
@@ -735,6 +910,7 @@ export default function App() {
           </div>
 
         </div>
+        )}
 
         {/* Minimal Clean Footer */}
         <footer className="mt-auto px-6 py-4 border-t border-line bg-white text-center text-xs text-muted">

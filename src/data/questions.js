@@ -1,6 +1,33 @@
 export const VIDEO_ID = 'hMwGWqyIKEs';
 export const VIDEO_BASE_URL = 'https://www.youtube.com/watch?v=hMwGWqyIKEs';
 
+export const TRACKS = [
+  {
+    id: 'django',
+    name: 'Django Framework',
+    shortName: 'Django',
+    subtitle: '54 Questions • 10-Day Plan',
+    status: 'active',
+    icon: '⚡',
+  },
+  {
+    id: 'python',
+    name: 'Python Core',
+    shortName: 'Python',
+    subtitle: 'OOP, GIL, Memory & Async',
+    status: 'upcoming',
+    icon: '🐍',
+  },
+  {
+    id: 'sql',
+    name: 'SQL & Databases',
+    shortName: 'SQL',
+    subtitle: 'Queries, Indexing & Joins',
+    status: 'upcoming',
+    icon: '🗄️',
+  },
+];
+
 export const DAYS_ROADMAP = [
   {
     day: 1,
