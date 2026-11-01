@@ -3,7 +3,7 @@ import {
   TRACKS_DATA,
   TRACKS
 } from './data/questions';
-import { getQuestionChallenge, SANDBOX_LINKS } from './data/challenges';
+import { getQuestionChallenge } from './data/challenges';
 import YouTubePlayer from './components/YouTubePlayer';
 import CodeBlock from './components/CodeBlock';
 import { 
@@ -19,8 +19,9 @@ import {
   BookOpen, 
   Sparkles, 
   Play, 
-  CheckCircle2, 
-  Circle 
+  Code2,
+  FileText,
+  Lightbulb
 } from 'lucide-react';
 
 // Formatted summary with highlighted code tokens
@@ -40,7 +41,7 @@ function FormattedSummary({ text }) {
           return (
             <code 
               key={i} 
-              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded-md bg-zinc-900 text-amber-300 font-semibold border border-zinc-700/80 shadow-xs"
+              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded bg-zinc-900 text-amber-300 font-semibold border border-zinc-700/80 shadow-xs"
             >
               {displayToken}
             </code>
@@ -86,13 +87,13 @@ function getShortQuestionTitle(question) {
     .replace(/\?$/, '')
     .trim();
 
-  if (clean.length > 40) {
-    clean = clean.slice(0, 38) + '…';
+  if (clean.length > 35) {
+    clean = clean.slice(0, 33) + '…';
   }
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : (question.tags?.[0] || 'Question');
 }
 
-const STORAGE_PREFIX = 'backend_dev_v6_';
+const STORAGE_PREFIX = 'backend_dev_zen_v1_';
 
 export default function App() {
   // Active track: 'django' or 'python'
@@ -141,16 +142,6 @@ export default function App() {
     }
   });
 
-  // Checklist map { [track_id_qid_step]: boolean }
-  const [checklistMap, setChecklistMap] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'checklist');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
   // Strict lock mode
   const [strictLock, setStrictLock] = useState(() => {
     try {
@@ -161,9 +152,10 @@ export default function App() {
     }
   });
 
+  // Active tab under video: 'concept' | 'code' | 'challenge' | 'links' | 'notes'
+  const [activeTab, setActiveTab] = useState('concept');
   const [loopMode, setLoopMode] = useState(false);
   const [currentNote, setCurrentNote] = useState('');
-  const [dayDropdownOpen, setDayDropdownOpen] = useState(false);
 
   // Persist states
   useEffect(() => {
@@ -189,14 +181,6 @@ export default function App() {
       console.warn(e);
     }
   }, [notesMap]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'checklist', JSON.stringify(checklistMap));
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [checklistMap]);
 
   useEffect(() => {
     try {
@@ -270,22 +254,13 @@ export default function App() {
       [key]: isNowDone
     }));
 
-    // If marked done, unlock and automatically advance to next question
+    // If marked done, automatically advance to next question
     if (isNowDone && id < currentTrack.questions.length) {
       setTimeout(() => {
         setActiveQuestionId(id + 1);
-      }, 350);
+      }, 300);
     }
   }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey]);
-
-  // Toggle checklist step
-  const handleToggleChecklist = (step) => {
-    const key = `${getQuestionKey(activeTrack, currentQuestion.id)}_${step}`;
-    setChecklistMap((prev) => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
 
   // Save note
   const handleSaveNote = () => {
@@ -329,7 +304,6 @@ export default function App() {
   const hasNextDay = currentDayIndex < currentTrack.days.length - 1;
 
   const handleSelectDay = (dayNum) => {
-    setDayDropdownOpen(false);
     const dayQuestions = currentTrack.questions.filter((q) => q.day === dayNum);
     const firstUnfinished = dayQuestions.find((q) => isQuestionUnlocked(q.id) && !completedMap[getQuestionKey(activeTrack, q.id)]);
     const target = firstUnfinished || dayQuestions[0];
@@ -348,40 +322,30 @@ export default function App() {
     }
   };
 
-  // Curated Interview Challenge & Practice info
+  // Curated Interview Challenge
   const challenge = useMemo(() => {
     return getQuestionChallenge(activeTrack, currentQuestion);
   }, [activeTrack, currentQuestion]);
 
-  // Checklist values for current question
-  const isWatched = !!checklistMap[`${getQuestionKey(activeTrack, currentQuestion.id)}_watched`];
-  const isCoded = !!checklistMap[`${getQuestionKey(activeTrack, currentQuestion.id)}_coded`];
-  const isSpoken = !!checklistMap[`${getQuestionKey(activeTrack, currentQuestion.id)}_spoken`];
-
   return (
-    <div className="min-h-screen bg-[#fafafa] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
+    <div className="min-h-screen bg-[#fafafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
       
-      {/* 1. MINIMAL CLEAN HEADER */}
-      <header className="border-b border-zinc-200/80 bg-white sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      {/* 1. ULTRA-MINIMAL TOP BAR */}
+      <header className="border-b border-zinc-200/70 bg-white/90 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           
           {/* Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-zinc-950 text-white font-mono font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded bg-zinc-950 text-white font-mono font-bold text-[11px] flex items-center justify-center shadow-xs">
               BD
-            </div>
-            <div>
-              <span className="font-heading font-extrabold text-sm tracking-tight text-zinc-950 block leading-tight">
-                Backend Dev
-              </span>
-              <span className="text-[10px] text-zinc-400 font-mono block leading-none">
-                30-Day Interview Prep
-              </span>
-            </div>
+            </span>
+            <span className="font-heading font-extrabold text-sm tracking-tight text-zinc-900">
+              Backend Dev
+            </span>
           </div>
 
-          {/* Clean Segmented Track Toggle */}
-          <div className="flex items-center p-0.5 rounded-lg bg-zinc-100 border border-zinc-200/80">
+          {/* Track Switcher */}
+          <div className="flex items-center p-0.5 rounded-lg bg-zinc-100 border border-zinc-200/70">
             {TRACKS.map((t) => {
               const isSelected = activeTrack === t.id;
               return (
@@ -397,30 +361,22 @@ export default function App() {
                 >
                   <span>{t.icon}</span>
                   <span>{t.name}</span>
-                  <span className="text-[10px] font-mono opacity-60">
-                    ({TRACKS_DATA[t.id].totalCount})
-                  </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Progress & Controls */}
-          <div className="flex items-center gap-2">
-            <div className="text-xs font-mono text-zinc-500 hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 border border-zinc-200/60">
-              <span className="font-bold text-zinc-950">{completedInTrack}/{currentTrack.totalCount}</span>
-              <span className="text-zinc-400">({trackPercent}%)</span>
-            </div>
+          {/* Right Status & Controls */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-mono text-zinc-500 hidden sm:inline">
+              <strong className="text-zinc-900">{completedInTrack}/{currentTrack.totalCount}</strong> ({trackPercent}%)
+            </span>
 
             <button
               type="button"
               onClick={() => setStrictLock(!strictLock)}
-              title={strictLock ? 'Strict Lock: ON (Sequential)' : 'Strict Lock: OFF (Free Nav)'}
-              className={`p-1.5 rounded-md border text-xs transition-colors flex items-center gap-1 ${
-                strictLock 
-                  ? 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50' 
-                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              }`}
+              title={strictLock ? 'Progression Lock: ON' : 'Progression Lock: OFF'}
+              className="p-1 text-zinc-400 hover:text-zinc-800 transition-colors"
             >
               {strictLock ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5 text-emerald-600" />}
             </button>
@@ -429,7 +385,7 @@ export default function App() {
               type="button"
               onClick={handleResetTrack}
               title="Reset progress"
-              className="p-1.5 rounded-md border border-zinc-200 bg-white text-zinc-400 hover:text-red-600 hover:bg-zinc-50 transition-colors"
+              className="p-1 text-zinc-400 hover:text-red-600 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -438,90 +394,46 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. SIMPLE, CLEAN DAY & QUESTION NAVIGATION (ZERO CLUTTER) */}
-      <div className="border-b border-zinc-200 bg-white sticky top-14 z-20 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      {/* 2. ZEN SINGLE-COLUMN WORKSPACE */}
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+        
+        {/* Day Header & Question Dots */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-zinc-200/70">
           
-          {/* Day Stepper & Title with Dropdown */}
-          <div className="relative flex items-center gap-2">
+          {/* Day Stepper */}
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handlePrevDay}
               disabled={!hasPrevDay}
-              className="p-1 rounded-md border border-zinc-200 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               title="Previous Day"
             >
-              <ChevronLeft className="w-4 h-4 text-zinc-700" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {/* Current Day Trigger Button */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setDayDropdownOpen(!dayDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1 rounded-lg border border-zinc-200 hover:border-zinc-300 bg-zinc-50 hover:bg-zinc-100 transition-colors text-xs"
-              >
-                <span className="font-mono font-bold text-zinc-950">
-                  Day {currentQuestion.day}/{currentTrack.days.length}
-                </span>
-                <span className="text-zinc-400">•</span>
-                <span className="font-heading font-semibold text-zinc-800 max-w-[160px] sm:max-w-[260px] truncate">
-                  {currentDayInfo.title}
-                </span>
-                <span className="text-zinc-400 text-[10px]">▼</span>
-              </button>
-
-              {/* Minimal Clean Day Selector Dropdown */}
-              {dayDropdownOpen && (
-                <div 
-                  className="absolute left-0 top-full mt-1.5 w-72 max-h-80 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-xl z-50 p-1.5 space-y-0.5"
-                  onMouseLeave={() => setDayDropdownOpen(false)}
-                >
-                  <div className="px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                    Jump to Day
-                  </div>
-                  {currentTrack.days.map((d) => {
-                    const dQuestions = currentTrack.questions.filter((q) => q.day === d.day);
-                    const dDone = dQuestions.filter((q) => !!completedMap[getQuestionKey(activeTrack, q.id)]).length;
-                    const isSelected = currentQuestion.day === d.day;
-                    const isComplete = dDone === dQuestions.length;
-
-                    return (
-                      <button
-                        key={d.day}
-                        type="button"
-                        onClick={() => handleSelectDay(d.day)}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between gap-2 transition-colors ${
-                          isSelected
-                            ? 'bg-zinc-900 text-white font-bold'
-                            : 'hover:bg-zinc-100 text-zinc-800'
-                        }`}
-                      >
-                        <span className="truncate">
-                          <strong className="font-mono">Day {d.day}:</strong> {d.title}
-                        </span>
-                        <span className={`text-[10px] font-mono flex-shrink-0 ${isSelected ? 'text-zinc-300' : 'text-zinc-400'}`}>
-                          {isComplete ? '✓ 3/3' : `${dDone}/3`}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="text-xs font-medium text-zinc-600">
+              <span className="font-mono font-bold text-zinc-900 mr-1.5">
+                Day {currentQuestion.day} of {currentTrack.days.length}
+              </span>
+              <span className="text-zinc-400 hidden sm:inline">•</span>
+              <span className="font-heading ml-1.5 hidden sm:inline text-zinc-700">
+                {currentDayInfo.title}
+              </span>
             </div>
 
             <button
               type="button"
               onClick={handleNextDay}
               disabled={!hasNextDay}
-              className="p-1 rounded-md border border-zinc-200 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               title="Next Day"
             >
-              <ChevronRight className="w-4 h-4 text-zinc-700" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Today's 3 Questions as Clean Minimalist Tabs */}
+          {/* Today's 3 Questions as Clean Pills */}
           <div className="flex items-center gap-1.5">
             {questionsInCurrentDay.map((q, idx) => {
               const isSelected = currentQuestion.id === q.id;
@@ -534,340 +446,306 @@ export default function App() {
                   type="button"
                   disabled={!isUnlocked}
                   onClick={() => setActiveQuestionId(q.id)}
-                  className={`px-3 py-1 rounded-md text-xs font-heading font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`h-7 px-2.5 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1 ${
                     isSelected
-                      ? 'bg-zinc-950 text-white shadow-xs'
+                      ? 'bg-zinc-900 text-white shadow-xs'
                       : isDone
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : !isUnlocked
                       ? 'text-zinc-300 cursor-not-allowed'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/80 hover:text-zinc-900'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
                   }`}
+                  title={q.title}
                 >
                   {isDone ? (
                     <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
                   ) : !isUnlocked ? (
                     <Lock className="w-2.5 h-2.5 opacity-40" />
-                  ) : (
-                    <span className="font-mono font-bold text-[11px] opacity-70">
-                      {idx + 1}.
-                    </span>
-                  )}
+                  ) : null}
                   <span>Q{idx + 1}</span>
-                  <span className="hidden md:inline text-[11px] font-normal opacity-80 max-w-[120px] truncate">
-                    {getShortQuestionTitle(q)}
-                  </span>
                 </button>
               );
             })}
           </div>
 
         </div>
-      </div>
 
-      {/* 3. FOCUSED 2-COLUMN STUDY & PRACTICE WORKSPACE */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Question Heading Strip */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+            <span>
+              {currentTrack.fullName.toUpperCase()} • QUESTION #{currentQuestion.id}
+            </span>
+            <span className="flex items-center gap-1 text-zinc-500">
+              <Clock className="w-3.5 h-3.5" />
+              {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
+            </span>
+          </div>
 
-          {/* LEFT COLUMN: FOCUSED VIDEO STATION & COMPLETION (7 cols) */}
-          <div className="lg:col-span-7 space-y-4">
+          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight m-0">
+            {currentQuestion.title}
+          </h1>
+        </div>
+
+        {/* Focused Video Station Card */}
+        <div className="rounded-2xl overflow-hidden border border-zinc-200/80 bg-white shadow-sm space-y-4 p-4 sm:p-5">
+          
+          {/* YouTube Player */}
+          <div className="rounded-xl overflow-hidden bg-black">
+            <YouTubePlayer
+              key={`${activeTrack}-${currentQuestion.id}`}
+              currentQuestion={currentQuestion}
+              videoId={currentTrack.videoId}
+              videoBaseUrl={currentTrack.videoBaseUrl}
+              loopMode={loopMode}
+              setLoopMode={setLoopMode}
+              onSegmentEnd={() => {}}
+            />
+          </div>
+
+          {/* Primary Action Button */}
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => handleToggleComplete(currentQuestion.id)}
+              className={`flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm transition-all duration-150 flex items-center justify-center gap-2.5 shadow-xs ${
+                isCurrentCompleted
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-zinc-950 hover:bg-black text-white'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                isCurrentCompleted ? 'bg-white/20' : 'bg-white/10'
+              }`}>
+                {isCurrentCompleted ? (
+                  <Check className="w-3 h-3 stroke-[3]" />
+                ) : (
+                  <Play className="w-2 h-2 fill-white ml-0.5" />
+                )}
+              </div>
+              <span>
+                {isCurrentCompleted 
+                  ? 'Mastered ✓ (Click to Undo)' 
+                  : 'Mark Done & Unlock Next Question →'}
+              </span>
+            </button>
+
+            {/* Quick Next Arrow */}
+            <button
+              type="button"
+              onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
+              disabled={!hasNext || !isNextUnlocked}
+              title="Next question"
+              className="p-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* 3. CLEAN CONTENT TABS (ZERO CLUTTER) */}
+        <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm overflow-hidden">
+          
+          {/* Tab Navigation Strip */}
+          <div className="border-b border-zinc-100 bg-zinc-50/70 p-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
             
-            {/* Main Video & Active Question Card */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-              
-              {/* Question Header Strip */}
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
-                      DAY {currentQuestion.day} • Q{currentQuestion.dayIndex}
-                    </span>
-                    <span className="text-xs font-mono text-zinc-500 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                      {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
-                    </span>
-                  </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('concept')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'concept'
+                  ? 'bg-white text-zinc-950 shadow-xs'
+                  : 'text-zinc-500 hover:text-zinc-900'
+              }`}
+            >
+              <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+              <span>Concept</span>
+            </button>
 
-                  {isCurrentCompleted ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                      Mastered
-                    </span>
-                  ) : (
-                    <span className="text-[11px] font-medium text-zinc-400 bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-full">
-                      In Progress
-                    </span>
-                  )}
-                </div>
+            {currentQuestion.tip && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('code')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'code'
+                    ? 'bg-white text-zinc-950 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                <Code2 className="w-3.5 h-3.5 text-cyan-500" />
+                <span>Syntax & Code</span>
+              </button>
+            )}
 
-                <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-zinc-950 tracking-tight leading-snug">
-                  {currentQuestion.title}
-                </h1>
-              </div>
+            {challenge && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('challenge')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'challenge'
+                    ? 'bg-white text-zinc-950 shadow-xs'
+                    : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                <span>Practice Task</span>
+              </button>
+            )}
 
-              {/* YouTube Player */}
-              <div className="rounded-xl overflow-hidden border border-zinc-200 bg-black">
-                <YouTubePlayer
-                  key={`${activeTrack}-${currentQuestion.id}`}
-                  currentQuestion={currentQuestion}
-                  videoId={currentTrack.videoId}
-                  videoBaseUrl={currentTrack.videoBaseUrl}
-                  loopMode={loopMode}
-                  setLoopMode={setLoopMode}
-                  onSegmentEnd={() => {}}
-                />
-              </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('links')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'links'
+                  ? 'bg-white text-zinc-950 shadow-xs'
+                  : 'text-zinc-500 hover:text-zinc-900'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-blue-500" />
+              <span>Docs ({currentQuestion.articles.length})</span>
+            </button>
 
-              {/* Primary Action Button */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => handleToggleComplete(currentQuestion.id)}
-                  className={`w-full py-3 rounded-xl font-heading font-bold text-sm transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm ${
-                    isCurrentCompleted
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-zinc-950 hover:bg-black text-white'
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                    isCurrentCompleted ? 'bg-white/20' : 'bg-white/10'
-                  }`}>
-                    {isCurrentCompleted ? (
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    ) : (
-                      <Play className="w-2.5 h-2.5 fill-white ml-0.5" />
-                    )}
-                  </div>
-                  <span>
-                    {isCurrentCompleted 
-                      ? '✓ Mastered! Click to Mark Incomplete' 
-                      : 'Mark Done & Unlock Next Question →'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Interactive Practice & Rehearsal Checklist */}
-              <div className="pt-3 border-t border-zinc-100">
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                  ACTIVE RECALL & PRACTICE CHECKLIST
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  
-                  <button
-                    type="button"
-                    onClick={() => handleToggleChecklist('watched')}
-                    className={`px-3 py-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
-                      isWatched 
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 font-semibold' 
-                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
-                    }`}
-                  >
-                    {isWatched ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-400 flex-shrink-0" />}
-                    <span>1. Watched Clip</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleChecklist('coded')}
-                    className={`px-3 py-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
-                      isCoded 
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 font-semibold' 
-                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
-                    }`}
-                  >
-                    {isCoded ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-400 flex-shrink-0" />}
-                    <span>2. Ran Code in REPL</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleChecklist('spoken')}
-                    className={`px-3 py-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
-                      isSpoken 
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 font-semibold' 
-                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
-                    }`}
-                  >
-                    {isSpoken ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-400 flex-shrink-0" />}
-                    <span>3. Answered Out Loud</span>
-                  </button>
-
-                </div>
-              </div>
-
-              {/* Prev / Next Bottom Controls */}
-              <div className="pt-2 flex items-center justify-between text-xs text-zinc-500">
-                <button
-                  type="button"
-                  onClick={() => hasPrevious && setActiveQuestionId(currentQuestion.id - 1)}
-                  disabled={!hasPrevious}
-                  className="inline-flex items-center gap-1 font-semibold text-zinc-600 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>Previous</span>
-                </button>
-
-                <span className="font-mono text-zinc-400">
-                  Question #{currentQuestion.id} of {currentTrack.totalCount}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
-                  disabled={!hasNext || !isNextUnlocked}
-                  className="inline-flex items-center gap-1 font-semibold text-zinc-600 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <span>Next</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('notes')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'notes'
+                  ? 'bg-white text-zinc-950 shadow-xs'
+                  : 'text-zinc-500 hover:text-zinc-900'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-500" />
+              <span>My Script {currentNote && '•'}</span>
+            </button>
 
           </div>
 
-          {/* RIGHT COLUMN: INTERACTIVE PRACTICE, CHALLENGE & REPL (5 cols) */}
-          <div className="lg:col-span-5 space-y-4">
+          {/* Tab Body */}
+          <div className="p-5 sm:p-6 min-h-[180px]">
             
-            {/* 1. Hands-On Interview Coding Challenge (ENGAGING PRACTICE) */}
-            {challenge && (
-              <div className="rounded-2xl border border-zinc-900 bg-zinc-950 text-white p-5 shadow-sm space-y-3.5">
-                <div className="flex items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                    <span className="font-heading font-extrabold text-xs tracking-tight text-white uppercase">
-                      HANDS-ON INTERVIEW CHALLENGE
-                    </span>
-                  </div>
-                  
-                  {/* Direct Launch REPL Button */}
-                  <a
-                    href={challenge.replLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-400 hover:bg-amber-300 text-zinc-950 text-[11px] font-mono font-bold transition-colors shadow-xs"
-                  >
-                    <Terminal className="w-3 h-3" />
-                    <span>Launch REPL</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
-                </div>
-
-                {/* Practical Task */}
-                <div>
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-1">
-                    PRACTICE TASK:
-                  </span>
-                  <p className="text-xs text-zinc-200 leading-relaxed font-sans font-medium">
-                    {challenge.task}
-                  </p>
-                </div>
-
-                {/* Interviewer Trap / Follow-up */}
-                <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block mb-1">
-                    INTERVIEWER TRAP QUESTION:
-                  </span>
-                  <p className="text-xs text-zinc-300 italic leading-relaxed">
-                    "{challenge.followUp}"
-                  </p>
+            {/* 1. CONCEPT TAB */}
+            {activeTab === 'concept' && (
+              <div className="space-y-3">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+                  CORE INTERVIEW TAKEAWAY
+                </span>
+                <div className="text-sm text-zinc-800 leading-relaxed font-sans">
+                  <FormattedSummary text={currentQuestion.summary} />
                 </div>
               </div>
             )}
 
-            {/* 2. Code & Syntax Reference */}
-            {currentQuestion.tip && (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 shadow-xs">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                    SYNTAX & COMMAND REFERENCE
-                  </span>
-                  <span className="text-[10px] font-mono text-zinc-400">
-                    Quick Copy
-                  </span>
-                </div>
+            {/* 2. SYNTAX & CODE TAB */}
+            {activeTab === 'code' && currentQuestion.tip && (
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+                  SYNTAX & QUICK RECALL
+                </span>
                 <CodeBlock code={currentQuestion.tip} />
               </div>
             )}
 
-            {/* 3. Core Interview Takeaway */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-2">
-                CORE TECHNICAL EXPLANATION
-              </span>
-              <div className="text-xs sm:text-sm text-zinc-700 leading-relaxed font-sans">
-                <FormattedSummary text={currentQuestion.summary} />
-              </div>
-            </div>
-
-            {/* 4. Official Documentation & In-Depth Reading Links */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                  DOCUMENTATION & PRACTICE LINKS
-                </span>
-                <BookOpen className="w-3.5 h-3.5 text-zinc-400" />
-              </div>
-
-              <div className="space-y-2">
-                {currentQuestion.articles.map((art, idx) => (
+            {/* 3. PRACTICE CHALLENGE TAB */}
+            {activeTab === 'challenge' && challenge && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                    HANDS-ON PRACTICE
+                  </span>
+                  
                   <a
-                    key={idx}
-                    href={art.url}
+                    href={challenge.replLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl border border-zinc-200/90 hover:border-zinc-300 hover:bg-zinc-50 flex items-center justify-between gap-3 text-left transition-colors group"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 transition-colors"
                   >
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
-                        {art.source}
-                      </span>
-                      <strong className="text-xs font-semibold text-zinc-900 group-hover:text-black block truncate">
-                        {art.title}
-                      </strong>
-                    </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-950 flex-shrink-0" />
+                    <Terminal className="w-3 h-3" />
+                    <span>Open Online REPL ↗</span>
                   </a>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* 5. Personal Interview Rehearsal Notes */}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                  MY SPOKEN ANSWER / SCRIPT
-                </span>
-                <span className="text-[10px] font-mono text-zinc-400">
-                  Auto-saved
-                </span>
+                <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 text-xs sm:text-sm text-zinc-800 leading-relaxed font-sans">
+                  <strong className="block font-heading text-xs text-zinc-900 uppercase tracking-wide mb-1 font-extrabold">
+                    Task:
+                  </strong>
+                  {challenge.task}
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/80 text-xs text-amber-950 leading-relaxed">
+                  <strong className="block font-heading text-[11px] text-amber-800 uppercase tracking-wide mb-1 font-extrabold">
+                    Interviewer Follow-up Question:
+                  </strong>
+                  "{challenge.followUp}"
+                </div>
               </div>
-              <textarea
-                value={currentNote}
-                onChange={(e) => setCurrentNote(e.target.value)}
-                onBlur={handleSaveNote}
-                placeholder="Write your 60-second explanation here as if answering an interviewer live..."
-                rows={3}
-                className="w-full text-xs font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleSaveNote}
-                  className="px-3 py-1 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors"
-                >
-                  Save Script
-                </button>
+            )}
+
+            {/* 4. DOCS & ARTICLES TAB */}
+            {activeTab === 'links' && (
+              <div className="space-y-3">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+                  IN-DEPTH DOCUMENTATION & TUTORIALS
+                </span>
+                <div className="space-y-2">
+                  {currentQuestion.articles.map((art, idx) => (
+                    <a
+                      key={idx}
+                      href={art.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-xl border border-zinc-200/80 hover:border-zinc-300 hover:bg-zinc-50 flex items-center justify-between gap-3 transition-colors group"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
+                          {art.source}
+                        </span>
+                        <strong className="text-xs font-semibold text-zinc-900 group-hover:text-black block truncate mt-0.5">
+                          {art.title}
+                        </strong>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-950 flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* 5. NOTES TAB */}
+            {activeTab === 'notes' && (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                  <span>MY INTERVIEW EXPLANATION SCRIPT</span>
+                  <span>Auto-saved</span>
+                </div>
+                <textarea
+                  value={currentNote}
+                  onChange={(e) => setCurrentNote(e.target.value)}
+                  onBlur={handleSaveNote}
+                  placeholder="Draft your 60-second explanation here as if answering an interviewer live..."
+                  rows={4}
+                  className="w-full text-xs font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y"
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveNote}
+                    className="px-3 py-1 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors"
+                  >
+                    Save Note
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
 
         </div>
+
       </main>
 
       {/* Clean Minimal Footer */}
-      <footer className="mt-auto px-6 py-4 border-t border-zinc-200 bg-white text-center text-xs text-zinc-400 font-mono">
+      <footer className="mt-auto px-6 py-4 border-t border-zinc-200/70 bg-white text-center text-xs text-zinc-400 font-mono">
         Backend Dev Journey • 30-Day Interview Preparation
       </footer>
 

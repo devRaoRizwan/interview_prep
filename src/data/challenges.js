@@ -207,3 +207,4 @@ export function getQuestionChallenge(trackId, question) {
     practiceType: 'Core Practical Exercise'
   };
 }
+
