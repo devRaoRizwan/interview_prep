@@ -3,10 +3,14 @@ import {
   TRACKS_DATA,
   TRACKS
 } from './data/questions';
-import { getQuestionChallenge, getQuestionScriptData } from './data/challenges';
+import { 
+  getQuestionChallenge, 
+  getQuestionScriptData, 
+  getQuestionDocSpecs 
+} from './data/challenges';
 import YouTubePlayer from './components/YouTubePlayer';
-import CodeBlock from './components/CodeBlock';
 import CircularTimer from './components/CircularTimer';
+import { Admonition, DocCodeBlock, DocTable } from './components/DocusaurusDoc';
 import { 
   Check, 
   Lock, 
@@ -31,7 +35,8 @@ import {
   Mic,
   Calendar,
   Layers,
-  Award
+  Award,
+  AlertCircle
 } from 'lucide-react';
 
 // Formatted summary with highlighted code tokens
@@ -367,20 +372,23 @@ export default function App() {
     return getQuestionScriptData(activeTrack, currentQuestion);
   }, [activeTrack, currentQuestion]);
 
+  // Documentation specifications matching https://developers.facia.ai/mobile/sdks/
+  const docSpecs = useMemo(() => {
+    return getQuestionDocSpecs(activeTrack, currentQuestion);
+  }, [activeTrack, currentQuestion]);
+
   // Required checkable tabs for this question
   const questionTabs = useMemo(() => {
     const tabs = [
-      { id: 'concept', label: 'Concept', icon: Lightbulb, iconColor: 'text-amber-500' },
+      { id: 'concept', label: 'Overview & Specs', icon: Lightbulb, iconColor: 'text-amber-500' },
+      { id: 'code', label: 'Commands & Syntax', icon: Code2, iconColor: 'text-cyan-500' },
     ];
-    if (currentQuestion.tip) {
-      tabs.push({ id: 'code', label: 'Syntax & Code', icon: Code2, iconColor: 'text-cyan-500' });
-    }
     if (challenge) {
       tabs.push({ id: 'challenge', label: 'Practice Task', icon: Sparkles, iconColor: 'text-purple-500' });
     }
     tabs.push({ id: 'notes', label: 'My Script', icon: FileText, iconColor: 'text-emerald-500' });
     return tabs;
-  }, [currentQuestion, challenge]);
+  }, [challenge]);
 
   // Check if a specific tab is checked for the current question
   const isTabChecked = useCallback((tabId) => {
@@ -994,7 +1002,7 @@ export default function App() {
           </div>
 
           {/* ======================================================== */}
-          {/* RIGHT COLUMN: FOCUS CLOCK & INTERACTIVE PRACTICE TABS    */}
+          {/* RIGHT COLUMN: FOCUS CLOCK & INTERACTIVE DOC TABS         */}
           {/* ======================================================== */}
           <div className="lg:col-span-6 xl:col-span-7 space-y-5">
             
@@ -1036,7 +1044,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Interactive Practice Tabs (Concept, Syntax, Practice Task, My Script) */}
+            {/* Interactive Developer Documentation Tabs (Facia Developer Style) */}
             <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-xs overflow-hidden">
               
               {/* Tab Navigation Strip with Checkboxes */}
@@ -1091,46 +1099,105 @@ export default function App() {
                 {/* CONTENT VIEWS */}
                 <div className="space-y-4">
                   
-                  {/* 1. CONCEPT TAB */}
+                  {/* ======================================================== */}
+                  {/* 1. OVERVIEW & SPECIFICATIONS TAB (Docusaurus/Facia SDK)  */}
+                  {/* ======================================================== */}
                   {activeTab === 'concept' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                          STEP 1: CORE INTERVIEW TAKEAWAY
-                        </span>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-600">
+                            STEP 1: ARCHITECTURAL OVERVIEW & SPECIFICATIONS
+                          </span>
+                          <h3 className="font-heading font-extrabold text-base text-[#1a1e27] mt-0.5">
+                            {currentQuestion.title}
+                          </h3>
+                        </div>
                         {isTabChecked('concept') && (
                           <span className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> Concept Understood
+                            <Check className="w-3 h-3 stroke-[3]" /> Reviewed ✓
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-zinc-800 leading-relaxed font-sans">
-                        <FormattedSummary text={currentQuestion.summary} />
+
+                      {/* Technical Description (Facia Developers Guide style) */}
+                      <div className="text-xs sm:text-[13px] text-zinc-800 leading-relaxed font-sans">
+                        <FormattedSummary text={docSpecs?.overview || currentQuestion.summary} />
                       </div>
+
+                      {/* Docusaurus-Style Parameter & Specifications Table */}
+                      {docSpecs?.table && (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500">
+                            Technical Specifications & Memory Model:
+                          </span>
+                          <DocTable headers={docSpecs.table.headers} rows={docSpecs.table.rows} />
+                        </div>
+                      )}
+
+                      {/* Docusaurus-Style Themed Admonitions (Note, Tip, Caution) */}
+                      {docSpecs?.admonitions && docSpecs.admonitions.map((adm, i) => (
+                        <Admonition key={i} type={adm.type} title={adm.title}>
+                          <FormattedSummary text={adm.content} />
+                        </Admonition>
+                      ))}
                     </div>
                   )}
 
-                  {/* 2. SYNTAX & CODE TAB */}
-                  {activeTab === 'code' && currentQuestion.tip && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                          STEP 2: SYNTAX & QUICK RECALL
-                        </span>
+                  {/* ======================================================== */}
+                  {/* 2. COMMANDS & SYNTAX TAB (Facia SDK Developer Commands)  */}
+                  {/* ======================================================== */}
+                  {activeTab === 'code' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-600">
+                            STEP 2: CLI COMMANDS & IMPLEMENTATION REFERENCE
+                          </span>
+                          <h3 className="font-heading font-extrabold text-base text-[#1a1e27] mt-0.5">
+                            Standard Developer Commands & Syntax
+                          </h3>
+                        </div>
                         {isTabChecked('code') && (
                           <span className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> Code Reviewed
+                            <Check className="w-3 h-3 stroke-[3]" /> Code Verified ✓
                           </span>
                         )}
                       </div>
-                      <CodeBlock code={currentQuestion.tip} />
+
+                      {/* Facia SDK Developer Commands with Clean Description & 1-Click Copy */}
+                      <div className="space-y-3">
+                        {docSpecs?.commands && docSpecs.commands.length > 0 ? (
+                          docSpecs.commands.map((cmd, idx) => (
+                            <DocCodeBlock 
+                              key={idx}
+                              code={cmd.cmd}
+                              language={cmd.lang}
+                              label={cmd.label}
+                              description={cmd.description}
+                            />
+                          ))
+                        ) : currentQuestion.tip ? (
+                          <DocCodeBlock 
+                            code={currentQuestion.tip}
+                            language={activeTrack === 'python' ? 'python' : 'bash'}
+                            label="QUICK RECALL"
+                          />
+                        ) : null}
+                      </div>
+
+                      {/* Environment Admonition */}
+                      <Admonition type="tip" title="Clean Environment Setup">
+                        Always execute these commands in an active virtual environment (e.g. <code className="font-mono text-[11px] bg-emerald-100 px-1 py-0.5 rounded text-emerald-900 border border-emerald-300">source .venv/bin/activate</code>) to ensure clean dependency isolation without host OS collisions.
+                      </Admonition>
                     </div>
                   )}
 
-                  {/* 3. PROPERLY FORMATTED PRACTICE TASK */}
+                  {/* ======================================================== */}
+                  {/* 3. PRACTICE TASK (Verification Drill & REPL Launcher)   */}
+                  {/* ======================================================== */}
                   {activeTab === 'challenge' && challenge && (
-                    <div className="space-y-5">
-                      
+                    <div className="space-y-4">
                       {/* Challenge Header & REPL Button */}
                       <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-zinc-100">
                         <div>
@@ -1155,8 +1222,8 @@ export default function App() {
 
                       {/* Step-by-Step Instructions */}
                       <div className="space-y-2">
-                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                          Action Items to Run:
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500">
+                          Action Items to Execute:
                         </span>
                         <ol className="list-none p-0 m-0 space-y-1.5">
                           {challenge.steps.map((step, idx) => (
@@ -1172,47 +1239,23 @@ export default function App() {
                         </ol>
                       </div>
 
-                      {/* Executable Code Snippet Box with Copy Button */}
+                      {/* Verification Script via DocCodeBlock */}
                       {challenge.codeSnippet && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                              Verification Script:
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopySnippet(challenge.codeSnippet)}
-                              className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 hover:text-[#1a1e27] transition-colors"
-                            >
-                              {snippetCopied ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
-                                  <span className="text-emerald-600 font-bold">Copied to Clipboard</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>Copy Script</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-
-                          <div className="rounded-xl overflow-hidden border border-[#2c3343] bg-[#1a1e27] p-3.5 font-mono text-xs sm:text-[13px] text-emerald-300 overflow-x-auto shadow-xs">
-                            <pre className="m-0 leading-relaxed whitespace-pre font-mono">
-                              {challenge.codeSnippet}
-                            </pre>
-                          </div>
-                        </div>
+                        <DocCodeBlock 
+                          code={challenge.codeSnippet}
+                          language="python"
+                          label="VERIFICATION CODE"
+                          description="Run this test in your interactive Python/Django REPL to observe runtime behavior:"
+                        />
                       )}
 
                       {/* Expected Terminal Output */}
                       {challenge.expectedOutput && (
-                        <div className="space-y-1.5">
-                          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                             Expected Terminal Output:
                           </span>
-                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-700 leading-relaxed overflow-x-auto">
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-800 leading-relaxed overflow-x-auto shadow-2xs">
                             <pre className="m-0 whitespace-pre font-mono">
                               {challenge.expectedOutput}
                             </pre>
@@ -1220,17 +1263,18 @@ export default function App() {
                         </div>
                       )}
 
-                      {/* Interviewer Deep-Dive Trap Question (with Reveal Button) */}
-                      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2.5">
+                      {/* Interviewer Deep-Dive Trap Question (as Docusaurus Admonition with Reveal) */}
+                      <div className="rounded-xl border border-amber-300/80 bg-amber-50/60 p-4 space-y-2.5 shadow-2xs">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-amber-800">
-                            INTERVIEWER DEEP-DIVE QUESTION
+                          <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                            <span>INTERVIEWER DEEP-DIVE TRAP QUESTION</span>
                           </span>
                           
                           <button
                             type="button"
                             onClick={() => setShowAnswer(!showAnswer)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-amber-300 text-[11px] font-mono font-bold text-amber-900 hover:bg-amber-100 transition-colors shadow-xs"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-amber-300 text-[11px] font-mono font-bold text-amber-900 hover:bg-amber-100 transition-colors shadow-2xs"
                           >
                             {showAnswer ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                             <span>{showAnswer ? 'Hide Answer' : 'Reveal Answer'}</span>
@@ -1243,7 +1287,7 @@ export default function App() {
 
                         {/* Collapsible Answer */}
                         {showAnswer && (
-                          <div className="pt-2 border-t border-amber-200/80 text-xs sm:text-[13px] text-amber-950 leading-relaxed font-sans">
+                          <div className="pt-2 border-t border-amber-200 text-xs sm:text-[13px] text-amber-950 leading-relaxed font-sans">
                             <strong className="font-heading font-extrabold text-[11px] uppercase tracking-wide text-amber-900 block mb-1">
                               Model Interview Response:
                             </strong>
@@ -1253,11 +1297,12 @@ export default function App() {
                           </div>
                         )}
                       </div>
-
                     </div>
                   )}
 
-                  {/* 4. SCRIPT TAB: WITH REAL CONVERSATIONAL PROMPT, 5M COLORED CLOCK & GATED SOLUTION */}
+                  {/* ======================================================== */}
+                  {/* 4. SCRIPT TAB: WITH REAL PROMPT, 5M CLOCK & GATED ANSWER */}
+                  {/* ======================================================== */}
                   {activeTab === 'notes' && scriptData && (
                     <div className="space-y-5">
                       

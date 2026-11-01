@@ -443,3 +443,289 @@ export function getQuestionScriptData(trackId, question) {
   };
 }
 
+// Developer documentation specifications, commands, parameter tables, and admonitions matching https://developers.facia.ai/mobile/sdks/
+export function getQuestionDocSpecs(trackId, question) {
+  if (!question) return null;
+
+  const titleLower = (question.title || '').toLowerCase();
+  const qId = question.id;
+
+  // --- PYTHON TRACK DOC SPECS ---
+  if (trackId === 'python') {
+    // Q1: List vs Tuple
+    if (titleLower.includes('list and tuple') || titleLower.includes('list vs tuple') || qId === 1) {
+      return {
+        overview: 'In Python, lists and tuples are fundamental sequence data structures with distinctly different mutability guarantees, internal CPython memory allocations, and dictionary key hashability. Lists are mutable dynamic arrays designed for runtime modifications, whereas tuples are immutable fixed-length records optimized for data safety and garbage collection efficiency.',
+        commands: [
+          {
+            label: 'Test Mutability Semantics',
+            cmd: `a = [1, 2]\nb = (1, 2)\n\n# Lists allow in-place mutations\na.append(3)   # Succeeds -> [1, 2, 3]\n\n# Tuples forbid mutation (AttributeError)\n# b.append(3) -> AttributeError: 'tuple' object has no attribute 'append'`,
+            lang: 'python',
+            description: 'Demonstrating mutability: lists allocate extra memory to allow in-place append operations, while tuples enforce read-only integrity.'
+          },
+          {
+            label: 'Dictionary Key Hashability Test',
+            cmd: `# Tuple as Dict Key (Valid)\ncache = {(10.5, 20.3): "GPS_COORDINATES"}\nprint("Tuple Key Success:", cache[(10.5, 20.3)])\n\n# List as Dict Key (Fails with TypeError)\ntry:\n    invalid = {[1, 2]: "ITEM"}\nexcept TypeError as err:\n    print("List Key Error:", err) # unhashable type: 'list'`,
+            lang: 'python',
+            description: 'Hashability verification: Dictionary keys in Python require a permanent __hash__() value. Only immutable types like tuples can be hashed.'
+          }
+        ],
+        table: {
+          headers: ['Specification', "Python List ('list')", "Python Tuple ('tuple')", 'Backend Architecture Impact'],
+          rows: [
+            ['Mutability', 'Mutable (allows append, pop, insert, sort)', 'Immutable (fixed size upon creation)', 'Tuples guarantee thread-safe read-only sharing across worker threads.'],
+            ['CPython Memory Strategy', 'Dynamic array with over-allocation headroom (realloc)', 'Exact pointer array; small tuples (<=20 items) cached in free-lists', 'Tuples eliminate memory fragmentation and reduce garbage collector pressure.'],
+            ['Hashability (__hash__)', 'Unhashable (raises TypeError: unhashable type)', 'Hashable (provided all nested items are also hashable)', 'Tuples can serve as composite dictionary keys and database cache lookups.'],
+            ['Lookup & Iteration Speed', 'O(1) index access', 'O(1) index access (~10% faster iteration in CPython)', 'Tuples provide better CPU L1/L2 cache locality for static data schemas.']
+          ]
+        },
+        admonitions: [
+          {
+            type: 'note',
+            title: 'CPython Small Tuple Free-List Caching',
+            content: 'CPython maintains an internal static array of 20 free-lists for tuples sized up to 20 elements. When a small tuple is destroyed, its memory block is preserved in the free-list rather than returned to the OS heap, making subsequent tuple creation instantaneous.'
+          },
+          {
+            type: 'caution',
+            title: 'The Nested Mutable Element Trap',
+            content: "While tuples are immutable containers, a tuple containing a mutable object (e.g. `t = (1, [2, 3])`) is NOT hashable! Running `hash(t)` raises `TypeError: unhashable type: 'list'` because tuple hashing recursively evaluates the hash of every inner element."
+          }
+        ]
+      };
+    }
+
+    // Q2: Decorators
+    if (titleLower.includes('decorator') || qId === 2) {
+      return {
+        overview: 'A decorator in Python is a design pattern and language syntactic construct that allows you to dynamically inject cross-cutting behavior (such as request latency metrics, JWT authentication, caching, or database transaction retries) around a function without altering its core source code. Under the hood, decorators are higher-order functions evaluated at module import time.',
+        commands: [
+          {
+            label: 'Production Performance Decorator',
+            cmd: `import time\nfrom functools import wraps\n\ndef track_latency(func):\n    @wraps(func)  # Critical: preserves __name__, __doc__, and type signatures\n    def wrapper(*args, **kwargs):\n        start_time = time.perf_counter()\n        result = func(*args, **kwargs)\n        elapsed_ms = (time.perf_counter() - start_time) * 1000\n        print(f"[METRIC] {func.__name__} executed in {elapsed_ms:.2f}ms")\n        return result\n    return wrapper\n\n@track_latency\ndef process_payment(amount: float):\n    """Simulates payment gateway call."""\n    time.sleep(0.05)\n    return {"status": "success", "amount": amount}`,
+            lang: 'python',
+            description: 'Standard production wrapper pattern with @functools.wraps for APM tracing and introspection preservation.'
+          }
+        ],
+        table: {
+          headers: ['Decorator Component', 'Type', 'Execution Timing', 'Architectural Purpose'],
+          rows: [
+            ['`@decorator` Syntax', 'Syntactic Sugar', 'Module Import Time', 'Translates literally to `func = decorator(func)` when the file is imported by Python.'],
+            ['`@functools.wraps`', 'Introspection Helper', 'Wrapper Definition Time', 'Copies `__name__`, `__doc__`, and function annotations to prevent wrapper masking.'],
+            ['`*args, **kwargs`', 'Variadic Arguments', 'Invocation Time', 'Ensures the wrapper accepts any number of positional or keyword arguments dynamically.'],
+            ['`return result`', 'Return Pass-Through', 'Invocation Time', 'Ensures the decorated function return payload passes seamlessly to the caller.']
+          ]
+        },
+        admonitions: [
+          {
+            type: 'tip',
+            title: 'Metadata Preservation Best Practice',
+            content: 'Never write a custom decorator without `@functools.wraps(func)`. Omitting wraps wipes out the function name and docstring, causing Sentry, Datadog APM, and Swagger/OpenAPI generators to report every endpoint as generic "wrapper".'
+          },
+          {
+            type: 'caution',
+            title: 'Avoid Import-Time Side Effects',
+            content: 'Code placed outside the inner `wrapper()` function executes only once when the module is imported by Python, not when the function is called. Only place execution logic inside `wrapper(*args, **kwargs)`.'
+          }
+        ]
+      };
+    }
+
+    // Q3: Comprehensions vs Generators
+    if (titleLower.includes('comprehension') || titleLower.includes('generator') || qId === 3) {
+      return {
+        overview: 'List comprehensions provide a concise syntax for eagerly constructing and materializing collections into memory. Generator expressions use an identical syntax enclosed in parentheses to evaluate items lazily on demand using the Python iterator protocol (`__iter__` and `__next__`), maintaining constant O(1) memory overhead regardless of stream size.',
+        commands: [
+          {
+            label: 'Memory Footprint Comparison',
+            cmd: `import sys\n\n# Eager List Comprehension: Materializes 1,000,000 items in RAM immediately\neager_list = [x ** 2 for x in range(1_000_000)]\nprint(f"List Memory: {sys.getsizeof(eager_list):,} bytes (~8.4 MB)")\n\n# Lazy Generator Expression: Yields items on demand with constant RAM\nlazy_gen = (x ** 2 for x in range(1_000_000))\nprint(f"Generator Memory: {sys.getsizeof(lazy_gen):,} bytes (~192 bytes)")`,
+            lang: 'python',
+            description: 'Measuring RAM consumption between eager heap allocation and lazy generator streaming.'
+          }
+        ],
+        table: {
+          headers: ['Metric', 'List Comprehension `[...]`', 'Generator Expression `(...)`', 'Backend Production Decision'],
+          rows: [
+            ['Evaluation Strategy', 'Eager: creates entire collection in RAM upfront', 'Lazy: computes items one at a time on demand', 'Use generators for database streaming and large file I/O.'],
+            ['Memory Complexity', 'O(N) heap memory allocation', 'O(1) constant memory (~192 bytes)', 'Generators prevent Out-Of-Memory (OOM) Kubernetes container kills.'],
+            ['Pass Characteristics', 'Multi-pass: can iterate repeatedly; supports len()', 'Single-pass: exhausted once consumed', 'Convert to list only if multiple passes or random indexing are required.'],
+            ['Random Access', 'Supports indexing `lst[100]` and slicing `lst[10:20]`', 'No indexing: must advance sequentially via next()', 'Use comprehensions for small lookup tables and finite sets.']
+          ]
+        },
+        admonitions: [
+          {
+            type: 'note',
+            title: 'Django ORM Cursor Streaming (.iterator())',
+            content: 'In Django backends, chaining large QuerySets into a list comprehension evaluates all database rows into Python objects at once. Use `queryset.iterator(chunk_size=2000)` to stream records as a generator pipeline.'
+          },
+          {
+            type: 'warning',
+            title: 'Generator Exhaustion Warning',
+            content: 'Generators can only be read once. Once the stream finishes, subsequent loops will silently yield 0 items without throwing an error.'
+          }
+        ]
+      };
+    }
+  }
+
+  // --- DJANGO TRACK DOC SPECS ---
+  if (trackId === 'django') {
+    // Q1: Django Install & Version
+    if (titleLower.includes('install') || titleLower.includes('version') || qId === 1) {
+      return {
+        overview: 'Django is distributed as a standard Python package via PyPI. In production engineering workflows, Django dependencies must be pinned and isolated within a dedicated virtual environment or Docker image to prevent environment drift, OS library contamination, and PATH resolution collisions.',
+        commands: [
+          {
+            label: 'Clean Environment Installation',
+            cmd: `# 1. Initialize isolated virtual environment\npython3 -m venv .venv\n\n# 2. Activate environment\nsource .venv/bin/activate  # On Linux/macOS\n# .venv\\Scripts\\activate   # On Windows\n\n# 3. Install pinned Django release\npip install "django>=5.1,<5.2"`,
+            lang: 'bash',
+            description: 'Step-by-step setup in a clean virtual environment.'
+          },
+          {
+            label: 'Deterministic Version Check',
+            cmd: `python -m django --version`,
+            lang: 'bash',
+            description: 'Verifies the Django version bound directly to the active Python interpreter on sys.path.'
+          }
+        ],
+        table: {
+          headers: ['Command / Method', 'Target Environment', 'Execution Binding', 'Why It Matters'],
+          rows: [
+            ['`python -m django --version`', 'Active Virtualenv', 'Explicitly binds to current Python `sys.path`', 'Guarantees execution using the active virtual environment, avoiding PATH collisions.'],
+            ['`django-admin --version`', 'System PATH binary', 'Resolves to first executable in PATH', 'Can silently invoke host OS Python version in CI/CD build scripts.'],
+            ['`django.get_version()`', 'Python Interactive Shell', 'Programmatic import inspection', 'Allows version gating inside startup checks and settings.py.']
+          ]
+        },
+        admonitions: [
+          {
+            type: 'note',
+            title: 'Virtual Environment Isolation Rule',
+            content: 'Never run `pip install` with global sudo permissions. Always verify your virtualenv is active by checking `which python`, which should output a path inside `.venv/bin/python`.'
+          },
+          {
+            type: 'tip',
+            title: 'Deterministic Dependency Manifests',
+            content: 'Lock exact package versions using `pip freeze > requirements.txt` or `poetry.lock` to guarantee identical builds between development machines and production Kubernetes pods.'
+          }
+        ]
+      };
+    }
+
+    // Q2: Project vs App Architecture
+    if (titleLower.includes('project and app') || titleLower.includes('startproject') || qId === 2) {
+      return {
+        overview: 'Django enforces a modular, domain-driven container architecture. A Django "Project" represents the entire web application container (configuration, settings, database routing, middleware), whereas an "App" is a decoupled, reusable Python package that handles a single business domain (such as accounts, orders, or billing).',
+        commands: [
+          {
+            label: 'Initialize Project & App Scaffolding',
+            cmd: `# 1. Create root project container\ndjango-admin startproject config .\n\n# 2. Generate decoupled domain app\npython manage.py startapp accounts`,
+            lang: 'bash',
+            description: 'Scaffolding the deployment container and modular business app.'
+          },
+          {
+            label: 'Register App in settings.py',
+            cmd: `# config/settings.py\nINSTALLED_APPS = [\n    'django.contrib.admin',\n    'django.contrib.auth',\n    'django.contrib.contenttypes',\n    'django.contrib.sessions',\n    'django.contrib.messages',\n    'django.contrib.staticfiles',\n    \n    # Modular Domain Apps\n    'accounts.apps.AccountsConfig',\n]`,
+            lang: 'python',
+            description: 'Registering the app with Django app registry so models and migrations are discovered.'
+          }
+        ],
+        table: {
+          headers: ['Architectural Entity', 'Scope & Role', 'Key Files Included', 'Responsibility'],
+          rows: [
+            ['Django Project', 'Global Deployment Container', '`settings.py`, `urls.py`, `wsgi.py`, `asgi.py`', 'Houses database credentials, middleware chains, root URLconf, and WSGI deployment hooks.'],
+            ['Django App', 'Domain Business Module', '`models.py`, `views.py`, `serializers.py`, `migrations/`', 'Encapsulates a bounded context following the Single Responsibility Principle.'],
+            ['`INSTALLED_APPS`', 'Django App Registry', '`config/settings.py`', 'Determines which modules are scanned by the ORM, migration engine, and template loaders.']
+          ]
+        },
+        admonitions: [
+          {
+            type: 'tip',
+            title: 'Single Responsibility Principle',
+            content: 'Keep apps focused on a single business domain. If your `accounts` app handles both user profiles and Stripe payments, split billing out into a separate `billing` app.'
+          },
+          {
+            type: 'caution',
+            title: 'Avoid Monolithic Root Code',
+            content: 'Never place model classes or domain business logic directly in the project configuration folder (`config/`). Models must reside within registered apps to generate database migrations properly.'
+          }
+        ]
+      };
+    }
+
+    // Q3: Runserver vs Production WSGI
+    if (titleLower.includes('runserver') || qId === 3) {
+      return {
+        overview: 'The `manage.py runserver` command starts a lightweight development server designed specifically for local testing and debugging with automatic file reloading (`StatReloader`). It is single-process and unhardened against security vulnerabilities, making it entirely unsuitable for staging or production traffic.',
+        commands: [
+          {
+            label: 'Local Development Server',
+            cmd: `python manage.py runserver 127.0.0.1:8000`,
+            lang: 'bash',
+            description: 'Starts local testing server with hot reloading.'
+          },
+          {
+            label: 'Production WSGI Invocation (Gunicorn)',
+            cmd: `# Launch production application server with pre-forked workers\ngunicorn config.wsgi:application \\\n  --bind 0.0.0.0:8000 \\\n  --workers 4 \\\n  --timeout 60 \\\n  --access-logfile -`,
+            lang: 'bash',
+            description: 'Industrial application server configured for multi-core concurrency.'
+          }
+        ],
+        table: {
+          headers: ['Architecture Layer', 'Technology', 'Concurrency Model', 'Key Production Responsibility'],
+          rows: [
+            ['Development Server', '`manage.py runserver`', 'Single-threaded with StatReloader', 'Local developer testing only; auto-reloads on source code changes.'],
+            ['WSGI / ASGI Server', 'Gunicorn / Uvicorn', 'Pre-fork worker pool (`(2 * CPU cores) + 1`)', 'Manages concurrent Python worker processes, handles request timeouts, and restarts dead workers.'],
+            ['Reverse Proxy', 'Nginx / CloudFront', 'Asynchronous event-driven socket I/O', 'Terminates TLS/SSL, buffers slow clients, and serves static/media files directly from disk or S3.']
+          ]
+        },
+        admonitions: [
+          {
+            type: 'warning',
+            title: 'Security & Concurrency Warning',
+            content: '`runserver` has not undergone security audits. Running it in production exposes your backend to Denial of Service (DoS) attacks, memory leaks, and CPU exhaustion.'
+          },
+          {
+            type: 'tip',
+            title: 'Production Worker Sizing Rule',
+            content: 'For Gunicorn deployments, the recommended worker process formula is `(2 * CPU Cores) + 1` to ensure worker processes remain available while others wait on database I/O.'
+          }
+        ]
+      };
+    }
+  }
+
+  // --- GENERIC STRUCTURED DOC SPECS FOR ALL OTHER QUESTIONS ---
+  const cleanedTitle = question.title.replace(/\?$/, '');
+  return {
+    overview: `In backend engineering, ${cleanedTitle} is a critical concept for building reliable, performant services. ${question.summary || 'Review its implementation, complexity trade-offs, and runtime behavior in a clean environment.'}`,
+    commands: [
+      {
+        label: 'Verification & Execution Snippet',
+        cmd: question.tip ? question.tip : `# Testing: ${cleanedTitle}\nprint("Verifying ${cleanedTitle}")`,
+        lang: trackId === 'python' ? 'python' : 'bash',
+        description: `Run this snippet in an interactive shell or REPL to observe standard runtime behavior.`
+      }
+    ],
+    table: {
+      headers: ['Concept / Attribute', 'Technical Specification', 'Runtime Impact', 'Senior Recommendation'],
+      rows: [
+        ['Core Mechanism', question.title, 'Determines memory and CPU resource utilization', 'Profile behavior under simulated production load.'],
+        ['Execution Scope', trackId === 'python' ? 'Python Runtime / CPython Memory' : 'Django Framework & ORM Execution', 'Directly influences API response latency and query count', 'Keep operations deterministic and guard against race conditions.'],
+        ['Production Best Practice', 'Unit Testing & APM Monitoring', 'Prevents regressions and memory leaks', 'Write automated tests and monitor execution traces in APM dashboards.']
+      ]
+    },
+    admonitions: [
+      {
+        type: 'tip',
+        title: 'Senior Interview Strategy',
+        content: `When asked about "${cleanedTitle}", always articulate: 1) What problem it solves, 2) The underlying runtime mechanism, 3) Edge cases and failure modes under high load, and 4) How to optimize or cache it in production.`
+      },
+      {
+        type: 'note',
+        title: 'Clean Environment Setup',
+        content: `Always run code tests in an isolated virtual environment (` + (trackId === 'python' ? 'python3 -m venv .venv' : 'poetry or venv') + `) with pinned package versions.`
+      }
+    ]
+  };
+}
+
+
