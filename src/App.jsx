@@ -156,12 +156,29 @@ export default function App() {
   const [timerSeconds, setTimerSeconds] = useState(QUESTION_TIMER_SECONDS);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
 
-  // Reset timer whenever active question changes
+  // Helper for timer persistence key
+  const getTimerKey = useCallback((trackId, qId) => `${STORAGE_PREFIX}timer_${trackId}_${qId}`, []);
+
+  // Sync active question timer from localStorage or default to 20 mins
   useEffect(() => {
-    setTimerSeconds(QUESTION_TIMER_SECONDS);
+    try {
+      const savedTimer = localStorage.getItem(getTimerKey(activeTrack, activeQuestionId));
+      if (savedTimer !== null) {
+        const parsed = parseInt(savedTimer, 10);
+        setTimerSeconds(isNaN(parsed) ? QUESTION_TIMER_SECONDS : Math.max(0, parsed));
+      } else {
+        if (completedMap[getQuestionKey(activeTrack, activeQuestionId)]) {
+          setTimerSeconds(0);
+        } else {
+          setTimerSeconds(QUESTION_TIMER_SECONDS);
+        }
+      }
+    } catch {
+      setTimerSeconds(QUESTION_TIMER_SECONDS);
+    }
     setIsTimerRunning(true);
     setShowAnswer(false);
-  }, [activeTrack, activeQuestionId]);
+  }, [activeTrack, activeQuestionId, completedMap, getQuestionKey, getTimerKey]);
 
   // Run the countdown interval
   useEffect(() => {
@@ -179,6 +196,15 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [isTimerRunning]);
+
+  // Persist timer countdown in localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(getTimerKey(activeTrack, activeQuestionId), timerSeconds.toString());
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [timerSeconds, activeTrack, activeQuestionId, getTimerKey]);
 
   // Sync tab title with active 20m timer
   useEffect(() => {
@@ -330,10 +356,24 @@ export default function App() {
   // Toggle overall question completion
   const handleToggleComplete = useCallback((id) => {
     const key = getQuestionKey(activeTrack, id);
-    const isNowDone = !completedMap[key];
+    const isCurrentlyDone = !!completedMap[key];
+    const isTimerDone = timerSeconds === 0;
+
+    // Strict time enforcement: cannot mark complete before 20 minutes unless unlocking/undoing or strictLock is off
+    if (strictLock && !isTimerDone && !isCurrentlyDone) {
+      alert(`Full 20-minute focus session required on this question before marking it complete (${formatTimerDigits(timerSeconds)} remaining).`);
+      return;
+    }
+
+    const isNowDone = !isCurrentlyDone;
     
-    // When marking complete, also check all steps
+    // When marking complete, also check all steps and mark timer as finished
     if (isNowDone) {
+      setTimerSeconds(0);
+      try {
+        localStorage.setItem(getTimerKey(activeTrack, id), '0');
+      } catch (e) {}
+
       setTabChecksMap((prev) => {
         const next = { ...prev };
         questionTabs.forEach((t) => {
@@ -355,7 +395,7 @@ export default function App() {
         setActiveTab('concept');
       }, 300);
     }
-  }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, questionTabs]);
+  }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, getTimerKey, questionTabs, strictLock, timerSeconds]);
 
   // Action to mark current tab done and advance to next tab
   const handleMarkTabDoneAndNext = (currentTabId) => {
@@ -428,9 +468,11 @@ export default function App() {
 
   const trackPercent = Math.round((completedInTrack / currentTrack.totalCount) * 100);
   const isCurrentCompleted = !!completedMap[getQuestionKey(activeTrack, currentQuestion.id)];
+  const isTimerDone = timerSeconds === 0;
+  const isCurrentQuestionSatisfied = (areAllStepsChecked && isTimerDone) || isCurrentCompleted;
   const hasPrevious = currentQuestion.id > 1;
   const hasNext = currentQuestion.id < currentTrack.questions.length;
-  const isNextUnlocked = hasNext && isQuestionUnlocked(currentQuestion.id + 1) && (!strictLock || areAllStepsChecked || isCurrentCompleted);
+  const isNextUnlocked = hasNext && isQuestionUnlocked(currentQuestion.id + 1) && (!strictLock || isCurrentQuestionSatisfied);
 
   // Jump to first incomplete tab
   const handleJumpToIncompleteTab = () => {
@@ -680,10 +722,10 @@ export default function App() {
             />
           </div>
 
-          {/* Primary Action Button - Governed by Checkable Steps */}
+          {/* Primary Action Button - Governed by Checkable Steps & 20-min Timer */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center gap-3">
-              {areAllStepsChecked || isCurrentCompleted || !strictLock ? (
+              {isCurrentQuestionSatisfied || !strictLock ? (
                 /* Unlocked Button */
                 <button
                   type="button"
@@ -706,19 +748,27 @@ export default function App() {
                   <span>
                     {isCurrentCompleted 
                       ? 'Mastered ✓ (Click to Undo)' 
-                      : 'All Steps Complete! Mark Done & Unlock Next →'}
+                      : '20m & All Steps Complete! Mark Done & Unlock Next →'}
                   </span>
                 </button>
               ) : (
-                /* Locked Button until all steps are checked */
+                /* Locked Button until both all steps AND 20m timer are completed */
                 <button
                   type="button"
-                  onClick={handleJumpToIncompleteTab}
-                  className="flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm bg-zinc-100 hover:bg-zinc-200/80 text-zinc-500 border border-zinc-200/90 transition-all flex items-center justify-center gap-2 shadow-xs group"
+                  onClick={() => {
+                    if (!areAllStepsChecked) {
+                      handleJumpToIncompleteTab();
+                    }
+                  }}
+                  className="flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm bg-zinc-100 hover:bg-zinc-200/80 text-zinc-600 border border-zinc-200/90 transition-all flex items-center justify-center gap-2 shadow-xs group"
                 >
                   <Lock className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600" />
                   <span>
-                    Complete all {questionTabs.length} steps to unlock next ({checkedStepsCount}/{questionTabs.length} done)
+                    {!isTimerDone && !areAllStepsChecked
+                      ? `Complete 4 steps & 20m timer (${checkedStepsCount}/4 done • ${formatTimerDigits(timerSeconds)} left)`
+                      : !isTimerDone && areAllStepsChecked
+                      ? `Steps complete! Must spend full 20m on question (${formatTimerDigits(timerSeconds)} left)`
+                      : `20m complete! Check off remaining steps (${checkedStepsCount}/${questionTabs.length} done)`}
                   </span>
                 </button>
               )}
@@ -728,7 +778,7 @@ export default function App() {
                 type="button"
                 onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
                 disabled={!hasNext || !isNextUnlocked}
-                title={hasNext && !isNextUnlocked ? 'Locked: Complete all steps on this question first' : 'Next question'}
+                title={hasNext && !isNextUnlocked ? `Locked: Complete all 4 steps and 20m timer (${formatTimerDigits(timerSeconds)} left)` : 'Next question'}
                 className="p-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -738,14 +788,16 @@ export default function App() {
             {/* Micro Helper & 20m Timer Progress Bar */}
             <div className="space-y-1 pt-1">
               <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
-                <span>Focus Session: {formatTimerDigits(timerSeconds)} remaining</span>
+                <span className={isTimerDone ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
+                  {isTimerDone ? '✓ 20m Focus Session Reached' : `Focus Session: ${formatTimerDigits(timerSeconds)} remaining`}
+                </span>
                 <span className={areAllStepsChecked ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
                   {checkedStepsCount}/{questionTabs.length} Steps Checked
                 </span>
               </div>
-              <div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-300 ${timerSeconds === 0 ? 'bg-emerald-500' : 'bg-zinc-900'}`}
+                  className={`h-full transition-all duration-300 ${isTimerDone ? 'bg-emerald-500' : 'bg-zinc-900'}`}
                   style={{ width: `${timerPercent}%` }}
                 />
               </div>
