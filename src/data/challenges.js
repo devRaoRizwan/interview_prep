@@ -324,3 +324,122 @@ Quit the server with CONTROL-C.`,
     replLink: trackId === 'python' ? 'https://onecompiler.com/python' : 'https://docs.djangoproject.com/en/stable/'
   };
 }
+
+// Curated 60-second interview spoken answer scripts, interviewer prompts, and 3-point senior response frameworks
+export function getQuestionScriptData(trackId, question) {
+  if (!question) return null;
+
+  const titleLower = (question.title || '').toLowerCase();
+  const qId = question.id;
+
+  // --- PYTHON TRACK SCRIPTS ---
+  if (trackId === 'python') {
+    // Q1: List vs Tuple
+    if (titleLower.includes('list and tuple') || titleLower.includes('list vs tuple') || qId === 1) {
+      return {
+        prompt: 'Can you walk me through the key architectural differences between a Python list and a tuple? Under what circumstances in a production backend would you specifically choose a tuple over a list, and what happens at the memory allocation level?',
+        framework: [
+          { time: '0-15s', point: 'Core Definition & Mutability: Lists are mutable dynamic arrays; Tuples are immutable fixed-size sequences.' },
+          { time: '15-45s', point: 'Under the Hood (CPython): Lists over-allocate memory with realloc for O(1) amortized appends; Tuples allocate exact memory and use small-tuple free-list caching.' },
+          { time: '45-60s', point: 'Backend Production Practice: Use tuples for dictionary keys, database composite primary keys, and immutable data transfer objects. Use lists only for collections requiring mutation or sorting.' }
+        ],
+        spokenScript: `"In Python, the fundamental difference comes down to mutability, memory layout, and hashability. Lists are mutable dynamic arrays: CPython deliberately over-allocates memory headroom using realloc so that append operations achieve amortized O(1) time complexity. In contrast, tuples are immutable and fixed-size; Python allocates exact memory without extra buffer slots and leverages internal free-lists to cache and reuse small tuple objects, minimizing garbage collection overhead.\n\nIn backend development, I strictly use tuples for fixed data structures—such as dictionary keys, coordinate pairs, or database composite keys—because immutability guarantees hashability and thread-safe read access. I only choose lists when I need a dynamic collection that requires in-place mutation, sorting, or iterative appending."`,
+        buzzwords: ['CPython PyTupleObject', 'Over-allocation buffer', 'Amortized O(1)', 'Hashability & __hash__', 'Thread-safe read access', 'Free-list caching'],
+        juniorMistake: 'Just saying "tuples use parentheses () and lists use brackets []" without explaining memory overhead, realloc, or dict key hashability.'
+      };
+    }
+
+    // Q2: Decorators
+    if (titleLower.includes('decorator') || qId === 2) {
+      return {
+        prompt: 'How do decorators work in Python under the hood? Walk me through how you would implement a custom decorator for measuring API endpoint latency or enforcing authentication in a backend API, and what pitfalls you must guard against.',
+        framework: [
+          { time: '0-15s', point: 'Mechanism: Higher-order function closure evaluated at module import time; @syntax translates to func = dec(func).' },
+          { time: '15-45s', point: 'Critical Best Practice: Always apply @functools.wraps(func) to prevent stripping __name__, __doc__, and type signatures.' },
+          { time: '45-60s', point: 'Production Application: Use decorators for cross-cutting concerns (JWT authentication, Datadog/Sentry instrumentation, caching, DB retries).' }
+        ],
+        spokenScript: `"Under the hood, a Python decorator is syntactic sugar for a higher-order function that accepts a callable, wraps it inside an execution closure, and returns the replacement wrapper function. When Python encounters @timing_decorator, it executes 'func = timing_decorator(func)' at module import time.\n\nIn a production backend, the single most critical practice when building any custom decorator is applying '@functools.wraps(func)' on the inner wrapper function. Without wraps, the decorated function loses its identity—its __name__ becomes 'wrapper', and its docstring and signature are wiped out, breaking APM tools like Datadog, Sentry, and OpenAPI documentation generators. I accept *args and **kwargs to support any endpoint signature, execute cross-cutting concerns like measuring latency or verifying JWT headers, and let exceptions propagate cleanly."`,
+        buzzwords: ['Higher-order function', 'Closure scope', '@functools.wraps', 'Introspection metadata', 'Import-time evaluation', 'Cross-cutting concerns'],
+        juniorMistake: 'Forgetting @functools.wraps, which renames decorated functions to "wrapper" and breaks Swagger docs, Celery task names, and Sentry stack traces.'
+      };
+    }
+
+    // Q3: List Comprehensions vs Generator Expressions
+    if (titleLower.includes('comprehension') || titleLower.includes('generator') || qId === 3) {
+      return {
+        prompt: 'What is the architectural difference between a list comprehension and a generator expression in Python? If you have to process 500,000 database rows in a backend worker, which do you choose and why?',
+        framework: [
+          { time: '0-15s', point: 'Eager vs Lazy Evaluation: List comprehensions allocate all elements in heap RAM upfront (O(N) memory); Generator expressions evaluate lazily on-demand (O(1) memory).' },
+          { time: '15-45s', point: 'Iterator Protocol: Generators implement __iter__ and __next__, yielding items one-by-one without holding the dataset in RAM.' },
+          { time: '45-60s', point: 'Production Guidance: Always use generator pipelines or ORM chunking (iterator()) for large datasets to prevent OOM container kills; reserve comprehensions for small datasets needing random indexing.' }
+        ],
+        spokenScript: `"The fundamental architectural difference is eager versus lazy evaluation. A list comprehension eagerly allocates and builds the entire list in heap memory immediately, returning a populated list object with O(N) memory complexity. A generator expression evaluates lazily using parentheses: it returns a generator object conforming to Python's iterator protocol, producing items one at a time on demand via '__next__()' with O(1) constant memory.\n\nIf I'm processing 500,000 records from Postgres in a Celery worker, loading them all into a list comprehension risks triggering an Out-Of-Memory (OOM) kill by the Kubernetes container orchestrator. I stream the records using a generator or Django's .iterator() to keep resident memory minimal. I only use list comprehensions when the collection is small and I require random indexing, len() lookups, or multiple passes."`,
+        buzzwords: ['Eager vs Lazy evaluation', 'Iterator protocol (__next__)', 'O(1) auxiliary space', 'OOM Container termination', 'Streaming data pipeline'],
+        juniorMistake: 'Defaulting to list comprehensions for every loop, causing sudden memory spikes and container crashes under heavy production traffic.'
+      };
+    }
+  }
+
+  // --- DJANGO TRACK SCRIPTS ---
+  if (trackId === 'django') {
+    // Q1: Django Install & Version
+    if (titleLower.includes('install') || titleLower.includes('version') || qId === 1) {
+      return {
+        prompt: 'Walk me through how you install Django in a production microservice repository. Why is executing "python -m django --version" standard practice over running the "django-admin" CLI directly?',
+        framework: [
+          { time: '0-15s', point: 'Environment Isolation: Always install inside a pinned virtual environment (venv, poetry, Docker) rather than global system Python.' },
+          { time: '15-45s', point: 'python -m vs django-admin: "python -m django" explicitly guarantees execution using the active virtual environment interpreter on sys.path.' },
+          { time: '45-60s', point: 'Production CI/CD: Prevents PATH collisions where global system binaries silently execute incorrect Python or Django versions in deployment containers.' }
+        ],
+        spokenScript: `"In a production backend environment, we strictly isolate Django inside a dedicated virtual environment using venv, poetry, or containerized Docker builds, locking exact dependency versions in requirements.txt or poetry.lock. We verify the installed version with 'python -m django --version'.\n\nWe prefer 'python -m' over standalone 'django-admin' because 'python -m django' explicitly invokes the Python interpreter and virtualenv currently active in the shell session. Standalone CLI binaries like 'django-admin' resolve via the system PATH and frequently point to the host OS Python version, causing insidious environment drift, missing library errors, or migration failures in CI/CD build pipelines."`,
+        buzzwords: ['Virtualenv isolation', 'Deterministic CI/CD builds', 'sys.path resolution', 'Interpreter binding', 'Version pinning'],
+        juniorMistake: 'Installing Django globally with sudo pip install or relying on untracked django-admin binaries that point to host OS Python.'
+      };
+    }
+
+    // Q2: Project vs App Architecture
+    if (titleLower.includes('project and app') || titleLower.includes('startproject') || qId === 2) {
+      return {
+        prompt: 'How do you explain the architectural difference between a Django Project and a Django App to an engineer joining your backend team?',
+        framework: [
+          { time: '0-15s', point: 'Project = Deployment Container: Holds global configuration (settings, root urls, WSGI/ASGI, middleware).' },
+          { time: '15-45s', point: 'App = Modular Domain: Encapsulates models, business logic, serializers, and migrations for a single bounded context.' },
+          { time: '45-60s', point: 'Architectural Hygiene: Keeps business domains decoupled and registered in INSTALLED_APPS, preventing monolithic spaghetti.' }
+        ],
+        spokenScript: `"In Django architecture, a Project represents the entire web application container, whereas an App represents a modular, self-contained business domain. The Project holds global infrastructure: settings.py, root urls.py, middleware chains, database connection routing, and WSGI/ASGI entrypoints. An App encapsulates a single bounded context—such as authentication, payments, or orders—containing its own models, views, serializers, and migrations.\n\nStoring all code directly in the project root creates an unmaintainable monolithic ball of mud. Breaking business logic into discrete apps follows the Single Responsibility Principle, enables parallel team ownership, and allows components to be reused or extracted into microservices cleanly."`,
+        buzzwords: ['Container vs Domain module', 'Bounded context', 'Single Responsibility Principle', 'INSTALLED_APPS registry', 'Modular architecture'],
+        juniorMistake: 'Treating Django like a single-script framework and dumping all models, views, and routes into the root project directory.'
+      };
+    }
+
+    // Q3: Runserver vs Production WSGI
+    if (titleLower.includes('runserver') || qId === 3) {
+      return {
+        prompt: 'Why must "python manage.py runserver" never be exposed to production traffic? Describe the complete production deployment architecture for a Django API.',
+        framework: [
+          { time: '0-15s', point: 'runserver Limitations: Single-threaded, unhardened against exploits, lacks process supervision, StatReloader wastes CPU.' },
+          { time: '15-45s', point: 'WSGI/ASGI Layer: Deploy with Gunicorn or Uvicorn using a pre-fork worker pool scaled to CPU cores (2 * cores + 1).' },
+          { time: '45-60s', point: 'Reverse Proxy: Place Nginx or CloudFront upfront for TLS termination, slow-client buffering, and static/media asset offloading.' }
+        ],
+        spokenScript: `"Django's runserver is strictly a development server designed for local iteration with hot file reloading via StatReloader. It is single-process, unhardened against security exploits, cannot handle concurrent socket I/O under load, and wastes CPU monitoring file changes.\n\nIn production, we deploy Django using an industrial WSGI/ASGI server like Gunicorn or Uvicorn, configuring a pre-fork worker pool sized around 2 to 4 workers per CPU core. In front of Gunicorn, we position a reverse proxy such as Nginx or AWS CloudFront. The reverse proxy handles TLS termination, buffers slow clients, enforces rate limiting, and offloads static and media files directly from disk or S3 without consuming expensive Python worker threads."`,
+        buzzwords: ['Pre-fork worker model', 'StatReloader CPU overhead', 'Gunicorn / Uvicorn', 'Nginx reverse proxy', 'TLS termination & slow-client buffering'],
+        juniorMistake: 'Thinking runserver --noreload is acceptable for a staging or production server.'
+      };
+    }
+  }
+
+  // --- GENERIC STRUCTURED SENIOR SCRIPT FOR ALL OTHER QUESTIONS ---
+  const cleanedTitle = question.title.replace(/\?$/, '');
+  return {
+    prompt: `Imagine you are in an interview for a Senior Backend Engineer position. The interviewer asks: "Can you walk me through ${cleanedTitle}? How does it work under the hood, what edge cases have you encountered in production, and how do you optimize it for high throughput?"`,
+    framework: [
+      { time: '0-15s', point: `Core Definition & Purpose: Clearly define ${cleanedTitle} and what backend engineering problem it solves.` },
+      { time: '15-45s', point: `Mechanism & Trade-offs: Explain the runtime execution model, memory layout, and SQL/I/O implications.` },
+      { time: '45-60s', point: `Production Best Practices: Outline senior guidelines, failure modes under load, and junior pitfalls to avoid.` }
+    ],
+    spokenScript: `"When addressing ${cleanedTitle} in a production environment, I approach it from three angles: correctness, runtime complexity, and operational reliability.\n\nAt its core, ${question.summary || cleanedTitle}.\n\nUnder the hood, we have to consider resource utilization: how this affects CPU cycles, memory allocation, and database query latency. A common junior mistake is assuming default framework behaviors work seamlessly at scale without checking execution profiles or indexing.\n\nIn our production architecture, we ensure this is covered with unit tests, monitored via APM traces, and guarded against race conditions or resource leaks."`,
+    buzzwords: ['Runtime complexity', 'Resource allocation', 'APM tracing', 'O(1) / O(N) trade-offs', 'Production resilience'],
+    juniorMistake: 'Providing a superficial textbook answer without mentioning production trade-offs, concurrency, or performance under scale.'
+  };
+}
+

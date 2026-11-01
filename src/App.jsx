@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   TRACKS_DATA,
   TRACKS
 } from './data/questions';
-import { getQuestionChallenge } from './data/challenges';
+import { getQuestionChallenge, getQuestionScriptData } from './data/challenges';
 import YouTubePlayer from './components/YouTubePlayer';
 import CodeBlock from './components/CodeBlock';
+import CircularTimer from './components/CircularTimer';
 import { 
   Check, 
   Lock, 
   ChevronLeft, 
   ChevronRight, 
   RotateCcw, 
-  ExternalLink, 
   Clock, 
   Unlock, 
   Terminal, 
@@ -27,7 +27,9 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  Copy
+  Copy,
+  Mic,
+  AlertCircle
 } from 'lucide-react';
 
 // Formatted summary with highlighted code tokens
@@ -77,6 +79,7 @@ function formatTimerDigits(totalSeconds) {
 
 const STORAGE_PREFIX = 'backend_dev_zen_v3_';
 const QUESTION_TIMER_SECONDS = 20 * 60; // 20 Minutes (1200s)
+const SCRIPT_TIMER_SECONDS = 5 * 60;    // 5 Minutes (300s)
 
 export default function App() {
   // Active track: 'django' or 'python'
@@ -145,21 +148,28 @@ export default function App() {
     }
   });
 
-  // Active tab under video: 'concept' | 'code' | 'challenge' | 'notes'
+  // Active tab: 'concept' | 'code' | 'challenge' | 'notes'
   const [activeTab, setActiveTab] = useState('concept');
   const [loopMode, setLoopMode] = useState(false);
   const [currentNote, setCurrentNote] = useState('');
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showModelSolution, setShowModelSolution] = useState(false);
   const [snippetCopied, setSnippetCopied] = useState(false);
+
+  // Helper for question key
+  const getQuestionKey = useCallback((trackId, qId) => `${trackId}_${qId}`, []);
 
   // --- 20-MINUTE FOCUS TIMER STATE ---
   const [timerSeconds, setTimerSeconds] = useState(QUESTION_TIMER_SECONDS);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
-
-  // Helper for timer persistence key
   const getTimerKey = useCallback((trackId, qId) => `${STORAGE_PREFIX}timer_${trackId}_${qId}`, []);
 
-  // Sync active question timer from localStorage or default to 20 mins
+  // --- 5-MINUTE SCRIPT TIMER STATE (Gated model solution) ---
+  const [scriptTimerSeconds, setScriptTimerSeconds] = useState(SCRIPT_TIMER_SECONDS);
+  const [isScriptTimerRunning, setIsScriptTimerRunning] = useState(true);
+  const getScriptTimerKey = useCallback((trackId, qId) => `${STORAGE_PREFIX}script_timer_${trackId}_${qId}`, []);
+
+  // Sync active question 20m timer from localStorage
   useEffect(() => {
     try {
       const savedTimer = localStorage.getItem(getTimerKey(activeTrack, activeQuestionId));
@@ -178,9 +188,30 @@ export default function App() {
     }
     setIsTimerRunning(true);
     setShowAnswer(false);
+    setShowModelSolution(false);
   }, [activeTrack, activeQuestionId, completedMap, getQuestionKey, getTimerKey]);
 
-  // Run the countdown interval
+  // Sync active question 5m script timer from localStorage
+  useEffect(() => {
+    try {
+      const savedScriptTimer = localStorage.getItem(getScriptTimerKey(activeTrack, activeQuestionId));
+      if (savedScriptTimer !== null) {
+        const parsed = parseInt(savedScriptTimer, 10);
+        setScriptTimerSeconds(isNaN(parsed) ? SCRIPT_TIMER_SECONDS : Math.max(0, parsed));
+      } else {
+        if (completedMap[getQuestionKey(activeTrack, activeQuestionId)]) {
+          setScriptTimerSeconds(0);
+        } else {
+          setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
+        }
+      }
+    } catch {
+      setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
+    }
+    setIsScriptTimerRunning(true);
+  }, [activeTrack, activeQuestionId, completedMap, getQuestionKey, getScriptTimerKey]);
+
+  // Run the 20-minute question countdown interval
   useEffect(() => {
     if (!isTimerRunning) return;
 
@@ -197,7 +228,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isTimerRunning]);
 
-  // Persist timer countdown in localStorage
+  // Run the 5-minute script countdown interval (only when in 'notes' tab and running)
+  useEffect(() => {
+    if (activeTab !== 'notes' || !isScriptTimerRunning || scriptTimerSeconds <= 0) return;
+
+    const interval = setInterval(() => {
+      setScriptTimerSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeTab, isScriptTimerRunning, scriptTimerSeconds]);
+
+  // Persist 20m timer in localStorage
   useEffect(() => {
     try {
       localStorage.setItem(getTimerKey(activeTrack, activeQuestionId), timerSeconds.toString());
@@ -206,6 +254,15 @@ export default function App() {
     }
   }, [timerSeconds, activeTrack, activeQuestionId, getTimerKey]);
 
+  // Persist 5m script timer in localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(getScriptTimerKey(activeTrack, activeQuestionId), scriptTimerSeconds.toString());
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [scriptTimerSeconds, activeTrack, activeQuestionId, getScriptTimerKey]);
+
   // Sync tab title with active 20m timer
   useEffect(() => {
     const formatted = formatTimerDigits(timerSeconds);
@@ -213,7 +270,7 @@ export default function App() {
     document.title = `${prefix} Q${activeQuestionId}: ${currentTrack.name} - Backend Dev`;
   }, [timerSeconds, isTimerRunning, activeQuestionId, currentTrack.name]);
 
-  // Persist states
+  // Persist common states
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_PREFIX + 'track', activeTrack);
@@ -279,8 +336,6 @@ export default function App() {
     setActiveTab('concept');
   };
 
-  const getQuestionKey = useCallback((trackId, qId) => `${trackId}_${qId}`, []);
-
   // Sync note
   useEffect(() => {
     setCurrentNote(notesMap[getQuestionKey(activeTrack, activeQuestionId)] || '');
@@ -301,9 +356,13 @@ export default function App() {
     return currentTrack.questions.filter((q) => q.day === currentQuestion.day);
   }, [currentTrack, currentQuestion.day]);
 
-  // Curated Interview Challenge
+  // Curated Interview Challenge & Spoken Script Data
   const challenge = useMemo(() => {
     return getQuestionChallenge(activeTrack, currentQuestion);
+  }, [activeTrack, currentQuestion]);
+
+  const scriptData = useMemo(() => {
+    return getQuestionScriptData(activeTrack, currentQuestion);
   }, [activeTrack, currentQuestion]);
 
   // Required checkable tabs for this question (Docs link tab completely removed)
@@ -367,11 +426,13 @@ export default function App() {
 
     const isNowDone = !isCurrentlyDone;
     
-    // When marking complete, also check all steps and mark timer as finished
+    // When marking complete, also check all steps and mark timers as finished
     if (isNowDone) {
       setTimerSeconds(0);
+      setScriptTimerSeconds(0);
       try {
         localStorage.setItem(getTimerKey(activeTrack, id), '0');
+        localStorage.setItem(getScriptTimerKey(activeTrack, id), '0');
       } catch (e) {}
 
       setTabChecksMap((prev) => {
@@ -395,7 +456,7 @@ export default function App() {
         setActiveTab('concept');
       }, 300);
     }
-  }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, getTimerKey, questionTabs, strictLock, timerSeconds]);
+  }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, getTimerKey, getScriptTimerKey, questionTabs, strictLock, timerSeconds]);
 
   // Action to mark current tab done and advance to next tab
   const handleMarkTabDoneAndNext = (currentTabId) => {
@@ -458,6 +519,7 @@ export default function App() {
       setActiveQuestionId(1);
       setActiveTab('concept');
       setTimerSeconds(QUESTION_TIMER_SECONDS);
+      setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
     }
   };
 
@@ -507,18 +569,16 @@ export default function App() {
     }
   };
 
-  // Timer percentage completed
-  const timerElapsedSeconds = QUESTION_TIMER_SECONDS - timerSeconds;
-  const timerPercent = Math.min(100, Math.round((timerElapsedSeconds / QUESTION_TIMER_SECONDS) * 100));
+  const isScriptTimerDone = scriptTimerSeconds === 0 || !strictLock;
 
   return (
     <div className="min-h-screen bg-[#fafafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
       
       {/* 1. TOP MINIMAL HEADER BAR */}
-      <header className="border-b border-zinc-200/70 bg-white/90 backdrop-blur-md sticky top-0 z-30">
+      <header className="border-b border-zinc-200/70 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           
-          {/* Brand & Active 20m Timer Pill */}
+          {/* Brand & Mini Colored Clock Pill */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded bg-zinc-950 text-white font-mono font-bold text-[11px] flex items-center justify-center shadow-xs">
@@ -529,9 +589,17 @@ export default function App() {
               </span>
             </div>
 
-            {/* 20-MINUTE FOCUS TIMER WIDGET (Runs on tab + display) */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 shadow-xs">
-              <span className={`w-2 h-2 rounded-full ${timerSeconds === 0 ? 'bg-emerald-500' : isTimerRunning ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
+            {/* 20-MINUTE FOCUS CLOCK MINI STATUS WIDGET */}
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 shadow-xs">
+              <CircularTimer
+                secondsLeft={timerSeconds}
+                totalSeconds={QUESTION_TIMER_SECONDS}
+                isRunning={isTimerRunning}
+                size={22}
+                strokeWidth={3}
+                colorScheme="focus"
+                showControls={false}
+              />
               
               <span className={`font-mono text-xs font-bold ${timerSeconds === 0 ? 'text-emerald-700 font-extrabold' : 'text-zinc-900'}`}>
                 {timerSeconds === 0 ? '20m Reached' : formatTimerDigits(timerSeconds)}
@@ -591,7 +659,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setStrictLock(!strictLock)}
-              title={strictLock ? 'Progression Lock: ON (All 4 Steps Required)' : 'Progression Lock: OFF'}
+              title={strictLock ? 'Progression Lock: ON (All 4 Steps & 20m Required)' : 'Progression Lock: OFF'}
               className="p-1 text-zinc-400 hover:text-zinc-800 transition-colors"
             >
               {strictLock ? <Lock className="w-3.5 h-3.5 text-zinc-800" /> : <Unlock className="w-3.5 h-3.5 text-emerald-600" />}
@@ -689,21 +757,44 @@ export default function App() {
 
         </div>
 
-        {/* Question Heading Strip */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
-            <span>
-              {currentTrack.fullName.toUpperCase()} • QUESTION #{currentQuestion.id}
-            </span>
-            <span className="flex items-center gap-1 text-zinc-500">
-              <Clock className="w-3.5 h-3.5" />
-              {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
-            </span>
+        {/* Question Heading Card with Prominent Circular Clock on the Right */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-mono">
+              <span className="font-bold text-zinc-700">
+                {currentTrack.fullName.toUpperCase()} • QUESTION #{currentQuestion.id}
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1 text-zinc-500">
+                <Clock className="w-3.5 h-3.5" />
+                {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
+              </span>
+            </div>
+
+            <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-zinc-950 tracking-tight leading-snug m-0">
+              {currentQuestion.title}
+            </h1>
           </div>
 
-          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight m-0">
-            {currentQuestion.title}
-          </h1>
+          {/* 20-MINUTE COLORED CIRCULAR CLOCK FACE (Right Side) */}
+          <div className="flex-shrink-0 flex items-center justify-center pt-2 sm:pt-0 sm:pl-4 sm:border-l sm:border-zinc-100">
+            <CircularTimer
+              secondsLeft={timerSeconds}
+              totalSeconds={QUESTION_TIMER_SECONDS}
+              isRunning={isTimerRunning}
+              onToggleRunning={() => setIsTimerRunning(!isTimerRunning)}
+              onReset={() => {
+                setTimerSeconds(QUESTION_TIMER_SECONDS);
+                setIsTimerRunning(true);
+              }}
+              size={96}
+              strokeWidth={6}
+              colorScheme="focus"
+              label="20M FOCUS"
+              completedLabel="20m DONE"
+              subLabel={timerSeconds === 0 ? 'DONE' : isTimerRunning ? 'FOCUS' : 'PAUSED'}
+            />
+          </div>
         </div>
 
         {/* Focused Video Station Card */}
@@ -765,7 +856,7 @@ export default function App() {
                   <Lock className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600" />
                   <span>
                     {!isTimerDone && !areAllStepsChecked
-                      ? `Complete 4 steps & 20m timer (${checkedStepsCount}/4 done • ${formatTimerDigits(timerSeconds)} left)`
+                      ? `Complete 4 steps & 20m clock (${checkedStepsCount}/4 done • ${formatTimerDigits(timerSeconds)} left)`
                       : !isTimerDone && areAllStepsChecked
                       ? `Steps complete! Must spend full 20m on question (${formatTimerDigits(timerSeconds)} left)`
                       : `20m complete! Check off remaining steps (${checkedStepsCount}/${questionTabs.length} done)`}
@@ -785,21 +876,32 @@ export default function App() {
               </button>
             </div>
 
-            {/* Micro Helper & 20m Timer Progress Bar */}
-            <div className="space-y-1 pt-1">
-              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
-                <span className={isTimerDone ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
-                  {isTimerDone ? '✓ 20m Focus Session Reached' : `Focus Session: ${formatTimerDigits(timerSeconds)} remaining`}
-                </span>
-                <span className={areAllStepsChecked ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
-                  {checkedStepsCount}/{questionTabs.length} Steps Checked
-                </span>
-              </div>
-              <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-300 ${isTimerDone ? 'bg-emerald-500' : 'bg-zinc-900'}`}
-                  style={{ width: `${timerPercent}%` }}
-                />
+            {/* Step Check Pill Badges Strip */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono px-1 pt-1 border-t border-zinc-100">
+              <span className={isTimerDone ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
+                {isTimerDone ? '✓ 20m Focus Session Reached' : `Focus Session Clock: ${formatTimerDigits(timerSeconds)} left`}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {questionTabs.map((t) => {
+                  const done = isTabChecked(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setActiveTab(t.id)}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
+                        done
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold'
+                          : activeTab === t.id
+                          ? 'bg-zinc-200 text-zinc-900 font-semibold'
+                          : 'bg-zinc-50 text-zinc-500 hover:text-zinc-800'
+                      }`}
+                    >
+                      {done ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : <Circle className="w-2.5 h-2.5 text-zinc-300" />}
+                      <span>{t.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1027,36 +1129,199 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4. NOTES TAB */}
-              {activeTab === 'notes' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
-                    <span>STEP 4: MY 60-SECOND SPOKEN ANSWER</span>
-                    {isTabChecked('notes') ? (
-                      <span className="text-emerald-600 font-bold flex items-center gap-1">
-                        <Check className="w-3 h-3 stroke-[3]" /> Script Ready
+              {/* 4. SCRIPT TAB: WITH REAL CONVERSATIONAL PROMPT, 5M COLORED CLOCK & GATED SOLUTION */}
+              {activeTab === 'notes' && scriptData && (
+                <div className="space-y-5">
+                  
+                  {/* Script Header with 5-Minute Colored Circular Clock on the Right */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-purple-50/60 border border-purple-200/80">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100/90 px-2 py-0.5 rounded">
+                          STEP 4: 60-SECOND SPOKEN INTERVIEW REHEARSAL
+                        </span>
+                        {isTabChecked('notes') && (
+                          <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" /> Rehearsed ✓
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm font-semibold text-zinc-900 leading-snug m-0">
+                        Top interviewers grade your spoken articulation and structured reasoning under pressure. Draft your answer, then rehearse speaking it aloud for 60 seconds.
+                      </p>
+                    </div>
+
+                    {/* 5-MINUTE SCRIPT TIMER CLOCK (Right Side) */}
+                    <div className="flex-shrink-0 flex items-center justify-center pt-2 sm:pt-0 sm:pl-3 sm:border-l sm:border-purple-200/60">
+                      <CircularTimer
+                        secondsLeft={scriptTimerSeconds}
+                        totalSeconds={SCRIPT_TIMER_SECONDS}
+                        isRunning={isScriptTimerRunning && activeTab === 'notes'}
+                        onToggleRunning={() => setIsScriptTimerRunning(!isScriptTimerRunning)}
+                        onReset={() => {
+                          setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
+                          setIsScriptTimerRunning(true);
+                        }}
+                        size={84}
+                        strokeWidth={5}
+                        colorScheme="script"
+                        label="5M Script Gate"
+                        completedLabel="UNLOCKED"
+                        subLabel={scriptTimerSeconds === 0 ? 'UNLOCKED' : isScriptTimerRunning ? 'DRAFTING' : 'PAUSED'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Real Interviewer Conversational Prompt Box */}
+                  <div className="rounded-xl border border-zinc-200/90 bg-zinc-50/80 p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
+                      <div className="flex items-center gap-1.5 font-bold text-zinc-800 uppercase tracking-wider text-[11px]">
+                        <Mic className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Live Interviewer Question:</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        Target: 60 Seconds Out Loud
                       </span>
+                    </div>
+
+                    <blockquote className="m-0 text-sm sm:text-[15px] font-heading font-bold text-zinc-950 leading-relaxed italic border-l-3 border-purple-600 pl-3.5">
+                      "{scriptData.prompt}"
+                    </blockquote>
+
+                    {/* 3-Point Senior Answer Blueprint */}
+                    <div className="pt-2 border-t border-zinc-200/70 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                      {scriptData.framework.map((f, i) => (
+                        <div key={i} className="p-2.5 rounded-lg bg-white border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+                          <span className="font-mono font-extrabold text-purple-700 text-[10px] uppercase tracking-wider mb-1">
+                            {f.time}
+                          </span>
+                          <span className="text-zinc-700 font-sans leading-tight">
+                            {f.point}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* User's Drafting Area (Textarea) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-zinc-500 font-mono">
+                      <span>Draft your response in your own words:</span>
+                      <span>
+                        {currentNote.trim() ? currentNote.trim().split(/\s+/).filter(Boolean).length : 0} words
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={currentNote}
+                      onChange={(e) => setCurrentNote(e.target.value)}
+                      onBlur={handleSaveNote}
+                      placeholder="Draft your 60-second explanation here. Follow the 3-point blueprint: 1) Core definition, 2) Mechanism & edge cases, 3) Production guidelines..."
+                      rows={6}
+                      className="w-full text-xs sm:text-sm font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y leading-relaxed"
+                    />
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono text-zinc-400">
+                        Auto-checks when typed • Saves on blur
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSaveNote}
+                        className="px-3.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors shadow-xs"
+                      >
+                        Save Script
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* GATED SENIOR DEVELOPER SOLUTION (Requires 5 minutes on the script tab) */}
+                  <div className="pt-2">
+                    {!isScriptTimerDone ? (
+                      /* LOCKED STATE: User has not spent 5 minutes drafting */
+                      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs font-bold font-mono text-amber-900">
+                            <Lock className="w-4 h-4 text-amber-600" />
+                            <span>Model Senior Answer Gated (5-Minute Drafting Required)</span>
+                          </div>
+                          <p className="text-xs text-amber-800 m-0 leading-relaxed font-sans">
+                            Senior interviewers test independent reasoning. Spend at least 5 minutes drafting and reciting your explanation before viewing the model answer.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled
+                          className="px-4 py-2 rounded-xl bg-amber-200/80 text-amber-900 text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-not-allowed flex-shrink-0"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Locked ({formatTimerDigits(scriptTimerSeconds)} left)</span>
+                        </button>
+                      </div>
                     ) : (
-                      <span>Auto-checks when typed</span>
+                      /* UNLOCKED STATE: 5 minutes reached */
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-xs font-mono font-bold text-emerald-800">
+                              5 Minutes Reached! Model Senior Solution Unlocked
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowModelSolution(!showModelSolution)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-all shadow-xs"
+                          >
+                            {showModelSolution ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            <span>{showModelSolution ? 'Hide Model Answer' : 'Show Model Senior Answer'}</span>
+                          </button>
+                        </div>
+
+                        {/* REVEALED MODEL SOLUTION */}
+                        {showModelSolution && (
+                          <div className="pt-3 border-t border-emerald-200/80 space-y-3 font-sans">
+                            <div>
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 block mb-1">
+                                Verbatim 60-Second Senior Spoken Script (Rehearse Out Loud):
+                              </span>
+                              <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 text-xs sm:text-sm text-zinc-900 leading-relaxed font-sans whitespace-pre-line shadow-xs">
+                                {scriptData.spokenScript}
+                              </div>
+                            </div>
+
+                            {/* Keywords to Speak & Junior Candidate Pitfall */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                              <div className="p-3 rounded-lg bg-white border border-emerald-100 space-y-1.5">
+                                <strong className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 block">
+                                  Keywords to Speak Out Loud:
+                                </strong>
+                                <div className="flex flex-wrap gap-1">
+                                  {scriptData.buzzwords.map((w, idx) => (
+                                    <span key={idx} className="font-mono text-[11px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                      {w}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
+                                <strong className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-900 block">
+                                  Junior Pitfall to Avoid:
+                                </strong>
+                                <p className="text-zinc-800 m-0 leading-relaxed text-[11px] sm:text-xs font-sans">
+                                  {scriptData.juniorMistake}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <textarea
-                    value={currentNote}
-                    onChange={(e) => setCurrentNote(e.target.value)}
-                    onBlur={handleSaveNote}
-                    placeholder="Draft your explanation in your own words so you can rehearse saying it out loud without looking..."
-                    rows={5}
-                    className="w-full text-xs sm:text-sm font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleSaveNote}
-                      className="px-3.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors"
-                    >
-                      Save Script
-                    </button>
-                  </div>
+
                 </div>
               )}
 
