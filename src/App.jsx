@@ -29,7 +29,9 @@ import {
   EyeOff,
   Copy,
   Mic,
-  AlertCircle
+  Calendar,
+  Layers,
+  Award
 } from 'lucide-react';
 
 // Formatted summary with highlighted code tokens
@@ -365,7 +367,7 @@ export default function App() {
     return getQuestionScriptData(activeTrack, currentQuestion);
   }, [activeTrack, currentQuestion]);
 
-  // Required checkable tabs for this question (Docs link tab completely removed)
+  // Required checkable tabs for this question
   const questionTabs = useMemo(() => {
     const tabs = [
       { id: 'concept', label: 'Concept', icon: Lightbulb, iconColor: 'text-amber-500' },
@@ -572,25 +574,25 @@ export default function App() {
   const isScriptTimerDone = scriptTimerSeconds === 0 || !strictLock;
 
   return (
-    <div className="min-h-screen bg-[#fafafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
+    <div className="min-h-screen w-full bg-[#fafafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white antialiased">
       
-      {/* 1. TOP MINIMAL HEADER BAR */}
-      <header className="border-b border-zinc-200/70 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      {/* 1. TOP FULL-WIDTH HEADER BAR */}
+      <header className="w-full border-b border-zinc-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
           
-          {/* Brand & Mini Colored Clock Pill */}
+          {/* Left: Brand & Mini 20m Circular Clock Status Widget */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded bg-zinc-950 text-white font-mono font-bold text-[11px] flex items-center justify-center shadow-xs">
+              <span className="w-7 h-7 rounded-lg bg-zinc-950 text-white font-mono font-bold text-xs flex items-center justify-center shadow-xs">
                 BD
               </span>
-              <span className="font-heading font-extrabold text-sm tracking-tight text-zinc-900 hidden sm:inline">
+              <span className="font-heading font-extrabold text-sm sm:text-base tracking-tight text-zinc-900">
                 Backend Dev
               </span>
             </div>
 
             {/* 20-MINUTE FOCUS CLOCK MINI STATUS WIDGET */}
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 shadow-xs">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 shadow-xs">
               <CircularTimer
                 secondsLeft={timerSeconds}
                 totalSeconds={QUESTION_TIMER_SECONDS}
@@ -628,8 +630,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Track Switcher */}
-          <div className="flex items-center p-0.5 rounded-lg bg-zinc-100 border border-zinc-200/70">
+          {/* Center: Track Switcher */}
+          <div className="flex items-center p-1 rounded-xl bg-zinc-100 border border-zinc-200/80">
             {TRACKS.map((t) => {
               const isSelected = activeTrack === t.id;
               return (
@@ -637,7 +639,7 @@ export default function App() {
                   key={t.id}
                   type="button"
                   onClick={() => handleSwitchTrack(t.id)}
-                  className={`px-3 py-1 rounded-md text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-white text-zinc-950 shadow-xs'
                       : 'text-zinc-500 hover:text-zinc-800'
@@ -650,58 +652,60 @@ export default function App() {
             })}
           </div>
 
-          {/* Right Status & Controls */}
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-mono text-zinc-500 hidden sm:inline">
-              <strong className="text-zinc-900">{completedInTrack}/{currentTrack.totalCount}</strong> ({trackPercent}%)
-            </span>
+          {/* Right: Progress Stats, Lock Mode & Reset */}
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2 font-mono text-xs text-zinc-500">
+              <span className="text-zinc-400">Track:</span>
+              <strong className="text-zinc-900">{completedInTrack}/{currentTrack.totalCount}</strong>
+              <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-bold text-[10px]">
+                {trackPercent}%
+              </span>
+            </div>
 
             <button
               type="button"
               onClick={() => setStrictLock(!strictLock)}
               title={strictLock ? 'Progression Lock: ON (All 4 Steps & 20m Required)' : 'Progression Lock: OFF'}
-              className="p-1 text-zinc-400 hover:text-zinc-800 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 transition-colors shadow-2xs"
             >
-              {strictLock ? <Lock className="w-3.5 h-3.5 text-zinc-800" /> : <Unlock className="w-3.5 h-3.5 text-emerald-600" />}
+              {strictLock ? <Lock className="w-4 h-4 text-zinc-900" /> : <Unlock className="w-4 h-4 text-emerald-600" />}
             </button>
 
             <button
               type="button"
               onClick={handleResetTrack}
               title="Reset progress"
-              className="p-1 text-zinc-400 hover:text-red-600 transition-colors"
+              className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-400 hover:text-red-600 transition-colors shadow-2xs"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-4 h-4" />
             </button>
           </div>
 
         </div>
       </header>
 
-      {/* 2. ZEN SINGLE-COLUMN WORKSPACE */}
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-        
-        {/* Day Header & Question Dots */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-zinc-200/70">
+      {/* 2. FULL-WIDTH SUB-HEADER / DAILY NAVIGATION STRIP */}
+      <div className="w-full bg-white border-b border-zinc-200/70 px-4 sm:px-6 lg:px-8 py-2.5 shadow-2xs">
+        <div className="w-full flex flex-wrap items-center justify-between gap-3">
           
-          {/* Day Stepper */}
+          {/* Day Stepper & Title */}
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handlePrevDay}
               disabled={!hasPrevDay}
-              className="p-1 text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               title="Previous Day"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <div className="text-xs font-medium text-zinc-600">
-              <span className="font-mono font-bold text-zinc-900 mr-1.5">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-mono font-bold text-zinc-900 bg-zinc-100 px-2.5 py-0.5 rounded-md border border-zinc-200/60">
                 Day {currentQuestion.day} of {currentTrack.days.length}
               </span>
-              <span className="text-zinc-400 hidden sm:inline">•</span>
-              <span className="font-heading ml-1.5 hidden sm:inline text-zinc-700">
+              <span className="text-zinc-300 hidden sm:inline">•</span>
+              <span className="font-heading font-bold text-zinc-800 hidden sm:inline">
                 {currentDayInfo.title}
               </span>
             </div>
@@ -710,15 +714,18 @@ export default function App() {
               type="button"
               onClick={handleNextDay}
               disabled={!hasNextDay}
-              className="p-1 text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               title="Next Day"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Today's 3 Questions as Clean Pills */}
-          <div className="flex items-center gap-1.5">
+          {/* Today's Questions Navigation Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full py-0.5">
+            <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-wider mr-1 hidden md:inline">
+              Today's Targets:
+            </span>
             {questionsInCurrentDay.map((q, idx) => {
               const isSelected = currentQuestion.id === q.id;
               const isDone = !!completedMap[getQuestionKey(activeTrack, q.id)];
@@ -733,9 +740,9 @@ export default function App() {
                     setActiveQuestionId(q.id);
                     setActiveTab('concept');
                   }}
-                  className={`h-7 px-2.5 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1 ${
+                  className={`h-7 px-3 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-zinc-900 text-white shadow-xs'
+                      ? 'bg-zinc-950 text-white shadow-xs'
                       : isDone
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : !isUnlocked
@@ -750,632 +757,756 @@ export default function App() {
                     <Lock className="w-2.5 h-2.5 opacity-40" />
                   ) : null}
                   <span>Q{idx + 1}</span>
+                  <span className="hidden lg:inline font-normal opacity-80">: {q.title.length > 22 ? q.title.slice(0, 22) + '...' : q.title}</span>
                 </button>
               );
             })}
           </div>
 
-        </div>
-
-        {/* Question Heading Card with Prominent Circular Clock on the Right */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1.5 flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-mono">
-              <span className="font-bold text-zinc-700">
-                {currentTrack.fullName.toUpperCase()} • QUESTION #{currentQuestion.id}
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-zinc-500">
-                <Clock className="w-3.5 h-3.5" />
-                {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
-              </span>
-            </div>
-
-            <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-zinc-950 tracking-tight leading-snug m-0">
-              {currentQuestion.title}
-            </h1>
+          {/* Overall Day Time Info */}
+          <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono text-zinc-500">
+            <Clock className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Active: {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})</span>
           </div>
 
-          {/* 20-MINUTE COLORED CIRCULAR CLOCK FACE (Right Side) */}
-          <div className="flex-shrink-0 flex items-center justify-center pt-2 sm:pt-0 sm:pl-4 sm:border-l sm:border-zinc-100">
-            <CircularTimer
-              secondsLeft={timerSeconds}
-              totalSeconds={QUESTION_TIMER_SECONDS}
-              isRunning={isTimerRunning}
-              onToggleRunning={() => setIsTimerRunning(!isTimerRunning)}
-              onReset={() => {
-                setTimerSeconds(QUESTION_TIMER_SECONDS);
-                setIsTimerRunning(true);
-              }}
-              size={96}
-              strokeWidth={6}
-              colorScheme="focus"
-              label="20M FOCUS"
-              completedLabel="20m DONE"
-              subLabel={timerSeconds === 0 ? 'DONE' : isTimerRunning ? 'FOCUS' : 'PAUSED'}
-            />
-          </div>
         </div>
+      </div>
 
-        {/* Focused Video Station Card */}
-        <div className="rounded-2xl overflow-hidden border border-zinc-200/80 bg-white shadow-sm space-y-4 p-4 sm:p-5">
+      {/* 3. FULL-WIDTH RESPONSIVE MULTI-COLUMN WORKSPACE */}
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* YouTube Player */}
-          <div className="rounded-xl overflow-hidden bg-black">
-            <YouTubePlayer
-              key={`${activeTrack}-${currentQuestion.id}`}
-              currentQuestion={currentQuestion}
-              videoId={currentTrack.videoId}
-              videoBaseUrl={currentTrack.videoBaseUrl}
-              loopMode={loopMode}
-              setLoopMode={setLoopMode}
-              onSegmentEnd={() => {}}
-            />
-          </div>
+          {/* ======================================================== */}
+          {/* LEFT COLUMN: VIDEO PLAYER, COMPLETION & CURRICULUM       */}
+          {/* ======================================================== */}
+          <div className="lg:col-span-6 xl:col-span-5 space-y-5">
+            
+            {/* Question Heading Card */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-500">
+                <span className="px-2 py-0.5 rounded bg-zinc-950 text-white font-bold text-[11px]">
+                  {currentTrack.fullName.toUpperCase()}
+                </span>
+                <span className="font-bold text-zinc-800">QUESTION #{currentQuestion.id}</span>
+                <span>•</span>
+                <span className="flex items-center gap-1 text-zinc-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
+                </span>
+              </div>
 
-          {/* Primary Action Button - Governed by Checkable Steps & 20-min Timer */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-3">
-              {isCurrentQuestionSatisfied || !strictLock ? (
-                /* Unlocked Button */
-                <button
-                  type="button"
-                  onClick={() => handleToggleComplete(currentQuestion.id)}
-                  className={`flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm transition-all duration-150 flex items-center justify-center gap-2.5 shadow-xs ${
-                    isCurrentCompleted
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-zinc-950 hover:bg-black text-white'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                    isCurrentCompleted ? 'bg-white/20' : 'bg-white/10'
-                  }`}>
-                    {isCurrentCompleted ? (
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    ) : (
-                      <Play className="w-2 h-2 fill-white ml-0.5" />
-                    )}
-                  </div>
-                  <span>
-                    {isCurrentCompleted 
-                      ? 'Mastered ✓ (Click to Undo)' 
-                      : '20m & All Steps Complete! Mark Done & Unlock Next →'}
-                  </span>
-                </button>
-              ) : (
-                /* Locked Button until both all steps AND 20m timer are completed */
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!areAllStepsChecked) {
-                      handleJumpToIncompleteTab();
-                    }
-                  }}
-                  className="flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm bg-zinc-100 hover:bg-zinc-200/80 text-zinc-600 border border-zinc-200/90 transition-all flex items-center justify-center gap-2 shadow-xs group"
-                >
-                  <Lock className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600" />
-                  <span>
-                    {!isTimerDone && !areAllStepsChecked
-                      ? `Complete 4 steps & 20m clock (${checkedStepsCount}/4 done • ${formatTimerDigits(timerSeconds)} left)`
-                      : !isTimerDone && areAllStepsChecked
-                      ? `Steps complete! Must spend full 20m on question (${formatTimerDigits(timerSeconds)} left)`
-                      : `20m complete! Check off remaining steps (${checkedStepsCount}/${questionTabs.length} done)`}
-                  </span>
-                </button>
-              )}
-
-              {/* Quick Next Arrow */}
-              <button
-                type="button"
-                onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
-                disabled={!hasNext || !isNextUnlocked}
-                title={hasNext && !isNextUnlocked ? `Locked: Complete all 4 steps and 20m timer (${formatTimerDigits(timerSeconds)} left)` : 'Next question'}
-                className="p-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-zinc-950 tracking-tight leading-snug m-0">
+                {currentQuestion.title}
+              </h1>
             </div>
 
-            {/* Step Check Pill Badges Strip */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono px-1 pt-1 border-t border-zinc-100">
-              <span className={isTimerDone ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
-                {isTimerDone ? '✓ 20m Focus Session Reached' : `Focus Session Clock: ${formatTimerDigits(timerSeconds)} left`}
-              </span>
-              <div className="flex items-center gap-1.5">
-                {questionTabs.map((t) => {
-                  const done = isTabChecked(t.id);
-                  return (
+            {/* Video Player Card (Responsive 16:9 full width of left column) */}
+            <div className="rounded-2xl overflow-hidden border border-zinc-200/80 bg-white shadow-xs p-3 sm:p-4 space-y-4">
+              <div className="rounded-xl overflow-hidden bg-black shadow-xs">
+                <YouTubePlayer
+                  key={`${activeTrack}-${currentQuestion.id}`}
+                  currentQuestion={currentQuestion}
+                  videoId={currentTrack.videoId}
+                  videoBaseUrl={currentTrack.videoBaseUrl}
+                  loopMode={loopMode}
+                  setLoopMode={setLoopMode}
+                  onSegmentEnd={() => {}}
+                />
+              </div>
+
+              {/* Primary Completion Button & Time Gate */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-3">
+                  {isCurrentQuestionSatisfied || !strictLock ? (
+                    /* Unlocked Button */
                     <button
-                      key={t.id}
                       type="button"
-                      onClick={() => setActiveTab(t.id)}
-                      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
-                        done
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold'
-                          : activeTab === t.id
-                          ? 'bg-zinc-200 text-zinc-900 font-semibold'
-                          : 'bg-zinc-50 text-zinc-500 hover:text-zinc-800'
+                      onClick={() => handleToggleComplete(currentQuestion.id)}
+                      className={`flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm transition-all duration-150 flex items-center justify-center gap-2.5 shadow-xs ${
+                        isCurrentCompleted
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          : 'bg-zinc-950 hover:bg-black text-white'
                       }`}
                     >
-                      {done ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : <Circle className="w-2.5 h-2.5 text-zinc-300" />}
-                      <span>{t.label}</span>
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                        isCurrentCompleted ? 'bg-white/20' : 'bg-white/10'
+                      }`}>
+                        {isCurrentCompleted ? (
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        ) : (
+                          <Play className="w-2 h-2 fill-white ml-0.5" />
+                        )}
+                      </div>
+                      <span>
+                        {isCurrentCompleted 
+                          ? 'Mastered ✓ (Click to Undo)' 
+                          : '20m & All Steps Complete! Mark Done & Unlock Next →'}
+                      </span>
+                    </button>
+                  ) : (
+                    /* Locked Button until both all steps AND 20m timer are completed */
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!areAllStepsChecked) {
+                          handleJumpToIncompleteTab();
+                        }
+                      }}
+                      className="flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm bg-zinc-100 hover:bg-zinc-200/80 text-zinc-600 border border-zinc-200/90 transition-all flex items-center justify-center gap-2 shadow-xs group"
+                    >
+                      <Lock className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600" />
+                      <span>
+                        {!isTimerDone && !areAllStepsChecked
+                          ? `Complete 4 steps & 20m clock (${checkedStepsCount}/4 done • ${formatTimerDigits(timerSeconds)} left)`
+                          : !isTimerDone && areAllStepsChecked
+                          ? `Steps complete! Must spend full 20m on question (${formatTimerDigits(timerSeconds)} left)`
+                          : `20m complete! Check off remaining steps (${checkedStepsCount}/${questionTabs.length} done)`}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Quick Next Arrow */}
+                  <button
+                    type="button"
+                    onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
+                    disabled={!hasNext || !isNextUnlocked}
+                    title={hasNext && !isNextUnlocked ? `Locked: Complete all 4 steps and 20m timer (${formatTimerDigits(timerSeconds)} left)` : 'Next question'}
+                    className="p-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-2xs"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Step Check Pill Badges Strip */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono px-1 pt-1 border-t border-zinc-100">
+                  <span className={isTimerDone ? 'text-emerald-600 font-bold' : 'text-zinc-500'}>
+                    {isTimerDone ? '✓ 20m Focus Session Reached' : `Focus Session Clock: ${formatTimerDigits(timerSeconds)} left`}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {questionTabs.map((t) => {
+                      const done = isTabChecked(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setActiveTab(t.id)}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
+                            done
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold'
+                              : activeTab === t.id
+                              ? 'bg-zinc-200 text-zinc-900 font-semibold'
+                              : 'bg-zinc-50 text-zinc-500 hover:text-zinc-800'
+                          }`}
+                        >
+                          {done ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : <Circle className="w-2.5 h-2.5 text-zinc-300" />}
+                          <span>{t.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Today's Curriculum Schedule Card */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-3">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-zinc-600" />
+                  <span>Day {currentQuestion.day} Questions</span>
+                </span>
+                <span className="text-zinc-500">
+                  {questionsInCurrentDay.filter(q => !!completedMap[getQuestionKey(activeTrack, q.id)]).length} of {questionsInCurrentDay.length} Completed
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {questionsInCurrentDay.map((q, idx) => {
+                  const isCurrent = currentQuestion.id === q.id;
+                  const isDone = !!completedMap[getQuestionKey(activeTrack, q.id)];
+                  const isUnlocked = isQuestionUnlocked(q.id);
+
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      disabled={!isUnlocked}
+                      onClick={() => {
+                        setActiveQuestionId(q.id);
+                        setActiveTab('concept');
+                      }}
+                      className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                        isCurrent
+                          ? 'border-zinc-950 bg-zinc-950 text-white shadow-xs'
+                          : isDone
+                          ? 'border-emerald-200 bg-emerald-50/60 text-zinc-900 hover:bg-emerald-50'
+                          : !isUnlocked
+                          ? 'border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed opacity-60'
+                          : 'border-zinc-200 bg-zinc-50 hover:bg-white text-zinc-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-[11px] font-bold flex-shrink-0 ${
+                          isCurrent
+                            ? 'bg-white/20 text-white'
+                            : isDone
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-zinc-200 text-zinc-700'
+                        }`}>
+                          {isDone ? <Check className="w-3 h-3 stroke-[3]" /> : idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-heading font-bold text-xs sm:text-sm truncate m-0">
+                            {q.title}
+                          </p>
+                          <span className={`font-mono text-[10px] block mt-0.5 ${
+                            isCurrent ? 'text-zinc-300' : 'text-zinc-400'
+                          }`}>
+                            {q.startTime} — {q.endTime}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex-shrink-0">
+                        {isDone ? (
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                            isCurrent ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            DONE
+                          </span>
+                        ) : !isUnlocked ? (
+                          <Lock className="w-3.5 h-3.5 text-zinc-300" />
+                        ) : (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                            isCurrent ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-600'
+                          }`}>
+                            {isCurrent ? 'ACTIVE' : 'READY'}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
               </div>
             </div>
+
           </div>
 
-        </div>
-
-        {/* 3. CHECKABLE PRACTICE TABS (Docs tab removed) */}
-        <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm overflow-hidden">
-          
-          {/* Tab Navigation Strip with Checkboxes */}
-          <div className="border-b border-zinc-100 bg-zinc-50/70 p-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {questionTabs.map((tab) => {
-              const isSelected = activeTab === tab.id;
-              const isChecked = isTabChecked(tab.id);
-              const TabIcon = tab.icon;
-
-              return (
-                <div
-                  key={tab.id}
-                  className={`flex items-center rounded-lg transition-all ${
-                    isSelected
-                      ? 'bg-white shadow-xs text-zinc-950 font-bold'
-                      : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/60'
-                  }`}
-                >
-                  {/* Clickable Tab Checkbox Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleToggleTabCheck(tab.id, e)}
-                    title={isChecked ? `Uncheck ${tab.label}` : `Mark ${tab.label} as completed`}
-                    className="pl-2.5 pr-1.5 py-1.5 focus:outline-none"
-                  >
-                    {isChecked ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-zinc-300 hover:text-zinc-400" />
-                    )}
-                  </button>
-
-                  {/* Tab Selector Button */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className="pr-3 py-1.5 text-xs font-heading flex items-center gap-1.5 focus:outline-none"
-                  >
-                    <TabIcon className={`w-3.5 h-3.5 ${tab.iconColor}`} />
-                    <span className={isChecked ? 'line-through decoration-zinc-300 opacity-80' : ''}>
-                      {tab.label}
-                    </span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Tab Body */}
-          <div className="p-5 sm:p-6 min-h-[220px] flex flex-col justify-between">
+          {/* ======================================================== */}
+          {/* RIGHT COLUMN: FOCUS CLOCK & INTERACTIVE PRACTICE TABS    */}
+          {/* ======================================================== */}
+          <div className="lg:col-span-6 xl:col-span-7 space-y-5">
             
-            {/* CONTENT VIEWS */}
-            <div className="space-y-4">
+            {/* Focus Session Header with Proper Colored Clock on the Right */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${timerSeconds === 0 ? 'bg-emerald-500' : isTimerRunning ? 'bg-amber-500 animate-pulse' : 'bg-zinc-400'}`} />
+                  <span className="text-xs font-mono font-extrabold uppercase tracking-wider text-zinc-700">
+                    20-Minute Focus Clock
+                  </span>
+                </div>
+                <h3 className="font-heading font-extrabold text-base sm:text-lg text-zinc-950 m-0">
+                  Concept Mastery & Spoken Rehearsal
+                </h3>
+                <p className="text-xs text-zinc-500 m-0 font-sans leading-relaxed">
+                  Complete each of the 4 steps below and maintain active focus for the full 20 minutes before unlocking the next question.
+                </p>
+              </div>
+
+              {/* 20-MINUTE COLORED CIRCULAR CLOCK FACE (Right Side) */}
+              <div className="flex-shrink-0 flex items-center justify-center pt-2 sm:pt-0 sm:pl-4 sm:border-l sm:border-zinc-100">
+                <CircularTimer
+                  secondsLeft={timerSeconds}
+                  totalSeconds={QUESTION_TIMER_SECONDS}
+                  isRunning={isTimerRunning}
+                  onToggleRunning={() => setIsTimerRunning(!isTimerRunning)}
+                  onReset={() => {
+                    setTimerSeconds(QUESTION_TIMER_SECONDS);
+                    setIsTimerRunning(true);
+                  }}
+                  size={96}
+                  strokeWidth={6}
+                  colorScheme="focus"
+                  label="20M FOCUS"
+                  completedLabel="20m DONE"
+                  subLabel={timerSeconds === 0 ? 'DONE' : isTimerRunning ? 'FOCUS' : 'PAUSED'}
+                />
+              </div>
+            </div>
+
+            {/* Interactive Practice Tabs (Concept, Syntax, Practice Task, My Script) */}
+            <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-xs overflow-hidden">
               
-              {/* 1. CONCEPT TAB */}
-              {activeTab === 'concept' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                      STEP 1: CORE INTERVIEW TAKEAWAY
-                    </span>
-                    {isTabChecked('concept') && (
-                      <span className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1">
-                        <Check className="w-3 h-3 stroke-[3]" /> Concept Understood
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-zinc-800 leading-relaxed font-sans">
-                    <FormattedSummary text={currentQuestion.summary} />
-                  </div>
-                </div>
-              )}
+              {/* Tab Navigation Strip with Checkboxes */}
+              <div className="border-b border-zinc-100 bg-zinc-50/70 p-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                {questionTabs.map((tab) => {
+                  const isSelected = activeTab === tab.id;
+                  const isChecked = isTabChecked(tab.id);
+                  const TabIcon = tab.icon;
 
-              {/* 2. SYNTAX & CODE TAB */}
-              {activeTab === 'code' && currentQuestion.tip && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                      STEP 2: SYNTAX & QUICK RECALL
-                    </span>
-                    {isTabChecked('code') && (
-                      <span className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1">
-                        <Check className="w-3 h-3 stroke-[3]" /> Code Reviewed
-                      </span>
-                    )}
-                  </div>
-                  <CodeBlock code={currentQuestion.tip} />
-                </div>
-              )}
-
-              {/* 3. PROPERLY FORMATTED PRACTICE TASK */}
-              {activeTab === 'challenge' && challenge && (
-                <div className="space-y-5">
-                  
-                  {/* Challenge Header & REPL Button */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-zinc-100">
-                    <div>
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-600 block">
-                        STEP 3: PRACTICAL VERIFICATION DRILL
-                      </span>
-                      <h3 className="font-heading font-extrabold text-base text-zinc-950 mt-0.5">
-                        {challenge.title}
-                      </h3>
-                    </div>
-
-                    <a
-                      href={challenge.replLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-colors shadow-xs"
+                  return (
+                    <div
+                      key={tab.id}
+                      className={`flex items-center rounded-lg transition-all ${
+                        isSelected
+                          ? 'bg-white shadow-xs text-zinc-950 font-bold'
+                          : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/60'
+                      }`}
                     >
-                      <Terminal className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Launch Online REPL ↗</span>
-                    </a>
-                  </div>
-
-                  {/* Step-by-Step Instructions */}
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                      Action Items to Run:
-                    </span>
-                    <ol className="list-none p-0 m-0 space-y-1.5">
-                      {challenge.steps.map((step, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-[13px] text-zinc-800 leading-relaxed">
-                          <span className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-700 font-mono text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                            {idx + 1}
-                          </span>
-                          <span className="flex-1 font-sans">
-                            <FormattedSummary text={step} />
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-
-                  {/* Executable Code Snippet Box with Copy Button */}
-                  {challenge.codeSnippet && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                          Verification Script:
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopySnippet(challenge.codeSnippet)}
-                          className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 hover:text-zinc-950 transition-colors"
-                        >
-                          {snippetCopied ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
-                              <span className="text-emerald-600 font-bold">Copied to Clipboard</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy Script</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#0d1117] p-3.5 font-mono text-xs sm:text-[13px] text-emerald-300 overflow-x-auto shadow-xs">
-                        <pre className="m-0 leading-relaxed whitespace-pre font-mono">
-                          {challenge.codeSnippet}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Expected Terminal Output */}
-                  {challenge.expectedOutput && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                        Expected Terminal Output:
-                      </span>
-                      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-700 leading-relaxed overflow-x-auto">
-                        <pre className="m-0 whitespace-pre font-mono">
-                          {challenge.expectedOutput}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Interviewer Deep-Dive Trap Question (with Reveal Button) */}
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-amber-800">
-                        INTERVIEWER DEEP-DIVE QUESTION
-                      </span>
-                      
+                      {/* Clickable Tab Checkbox Button */}
                       <button
                         type="button"
-                        onClick={() => setShowAnswer(!showAnswer)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-amber-300 text-[11px] font-mono font-bold text-amber-900 hover:bg-amber-100 transition-colors shadow-xs"
+                        onClick={(e) => handleToggleTabCheck(tab.id, e)}
+                        title={isChecked ? `Uncheck ${tab.label}` : `Mark ${tab.label} as completed`}
+                        className="pl-2.5 pr-1.5 py-1.5 focus:outline-none"
                       >
-                        {showAnswer ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        <span>{showAnswer ? 'Hide Answer' : 'Reveal Answer'}</span>
+                        {isChecked ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-zinc-300 hover:text-zinc-400" />
+                        )}
+                      </button>
+
+                      {/* Tab Selector Button */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab(tab.id)}
+                        className="pr-3 py-1.5 text-xs font-heading flex items-center gap-1.5 focus:outline-none"
+                      >
+                        <TabIcon className={`w-3.5 h-3.5 ${tab.iconColor}`} />
+                        <span className={isChecked ? 'line-through decoration-zinc-300 opacity-80' : ''}>
+                          {tab.label}
+                        </span>
                       </button>
                     </div>
+                  );
+                })}
+              </div>
 
-                    <p className="text-xs sm:text-sm text-zinc-900 font-medium leading-relaxed font-sans m-0">
-                      "{challenge.interviewQuestion}"
-                    </p>
-
-                    {/* Collapsible Answer */}
-                    {showAnswer && (
-                      <div className="pt-2 border-t border-amber-200/80 text-xs sm:text-[13px] text-amber-950 leading-relaxed font-sans">
-                        <strong className="font-heading font-extrabold text-[11px] uppercase tracking-wide text-amber-900 block mb-1">
-                          Model Interview Response:
-                        </strong>
-                        <p className="m-0 leading-relaxed">
-                          {challenge.interviewAnswer}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              )}
-
-              {/* 4. SCRIPT TAB: WITH REAL CONVERSATIONAL PROMPT, 5M COLORED CLOCK & GATED SOLUTION */}
-              {activeTab === 'notes' && scriptData && (
-                <div className="space-y-5">
+              {/* Tab Body */}
+              <div className="p-5 sm:p-6 min-h-[340px] flex flex-col justify-between">
+                
+                {/* CONTENT VIEWS */}
+                <div className="space-y-4">
                   
-                  {/* Script Header with 5-Minute Colored Circular Clock on the Right */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-purple-50/60 border border-purple-200/80">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100/90 px-2 py-0.5 rounded">
-                          STEP 4: 60-SECOND SPOKEN INTERVIEW REHEARSAL
+                  {/* 1. CONCEPT TAB */}
+                  {activeTab === 'concept' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                          STEP 1: CORE INTERVIEW TAKEAWAY
                         </span>
-                        {isTabChecked('notes') && (
-                          <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> Rehearsed ✓
+                        {isTabChecked('concept') && (
+                          <span className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" /> Concept Understood
                           </span>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm font-semibold text-zinc-900 leading-snug m-0">
-                        Top interviewers grade your spoken articulation and structured reasoning under pressure. Draft your answer, then rehearse speaking it aloud for 60 seconds.
-                      </p>
-                    </div>
-
-                    {/* 5-MINUTE SCRIPT TIMER CLOCK (Right Side) */}
-                    <div className="flex-shrink-0 flex items-center justify-center pt-2 sm:pt-0 sm:pl-3 sm:border-l sm:border-purple-200/60">
-                      <CircularTimer
-                        secondsLeft={scriptTimerSeconds}
-                        totalSeconds={SCRIPT_TIMER_SECONDS}
-                        isRunning={isScriptTimerRunning && activeTab === 'notes'}
-                        onToggleRunning={() => setIsScriptTimerRunning(!isScriptTimerRunning)}
-                        onReset={() => {
-                          setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
-                          setIsScriptTimerRunning(true);
-                        }}
-                        size={84}
-                        strokeWidth={5}
-                        colorScheme="script"
-                        label="5M Script Gate"
-                        completedLabel="UNLOCKED"
-                        subLabel={scriptTimerSeconds === 0 ? 'UNLOCKED' : isScriptTimerRunning ? 'DRAFTING' : 'PAUSED'}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Real Interviewer Conversational Prompt Box */}
-                  <div className="rounded-xl border border-zinc-200/90 bg-zinc-50/80 p-4 space-y-3">
-                    <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
-                      <div className="flex items-center gap-1.5 font-bold text-zinc-800 uppercase tracking-wider text-[11px]">
-                        <Mic className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Live Interviewer Question:</span>
+                      <div className="text-sm text-zinc-800 leading-relaxed font-sans">
+                        <FormattedSummary text={currentQuestion.summary} />
                       </div>
-                      <span className="text-[10px] font-mono text-zinc-400">
-                        Target: 60 Seconds Out Loud
-                      </span>
                     </div>
+                  )}
 
-                    <blockquote className="m-0 text-sm sm:text-[15px] font-heading font-bold text-zinc-950 leading-relaxed italic border-l-3 border-purple-600 pl-3.5">
-                      "{scriptData.prompt}"
-                    </blockquote>
-
-                    {/* 3-Point Senior Answer Blueprint */}
-                    <div className="pt-2 border-t border-zinc-200/70 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                      {scriptData.framework.map((f, i) => (
-                        <div key={i} className="p-2.5 rounded-lg bg-white border border-zinc-200/80 shadow-xs flex flex-col justify-between">
-                          <span className="font-mono font-extrabold text-purple-700 text-[10px] uppercase tracking-wider mb-1">
-                            {f.time}
+                  {/* 2. SYNTAX & CODE TAB */}
+                  {activeTab === 'code' && currentQuestion.tip && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                          STEP 2: SYNTAX & QUICK RECALL
+                        </span>
+                        {isTabChecked('code') && (
+                          <span className="text-[11px] font-mono font-bold text-emerald-600 flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" /> Code Reviewed
                           </span>
-                          <span className="text-zinc-700 font-sans leading-tight">
-                            {f.point}
+                        )}
+                      </div>
+                      <CodeBlock code={currentQuestion.tip} />
+                    </div>
+                  )}
+
+                  {/* 3. PROPERLY FORMATTED PRACTICE TASK */}
+                  {activeTab === 'challenge' && challenge && (
+                    <div className="space-y-5">
+                      
+                      {/* Challenge Header & REPL Button */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-zinc-100">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-600 block">
+                            STEP 3: PRACTICAL VERIFICATION DRILL
                           </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* User's Drafting Area (Textarea) */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-zinc-500 font-mono">
-                      <span>Draft your response in your own words:</span>
-                      <span>
-                        {currentNote.trim() ? currentNote.trim().split(/\s+/).filter(Boolean).length : 0} words
-                      </span>
-                    </div>
-
-                    <textarea
-                      value={currentNote}
-                      onChange={(e) => setCurrentNote(e.target.value)}
-                      onBlur={handleSaveNote}
-                      placeholder="Draft your 60-second explanation here. Follow the 3-point blueprint: 1) Core definition, 2) Mechanism & edge cases, 3) Production guidelines..."
-                      rows={6}
-                      className="w-full text-xs sm:text-sm font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y leading-relaxed"
-                    />
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-mono text-zinc-400">
-                        Auto-checks when typed • Saves on blur
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleSaveNote}
-                        className="px-3.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors shadow-xs"
-                      >
-                        Save Script
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* GATED SENIOR DEVELOPER SOLUTION (Requires 5 minutes on the script tab) */}
-                  <div className="pt-2">
-                    {!isScriptTimerDone ? (
-                      /* LOCKED STATE: User has not spent 5 minutes drafting */
-                      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-xs font-bold font-mono text-amber-900">
-                            <Lock className="w-4 h-4 text-amber-600" />
-                            <span>Model Senior Answer Gated (5-Minute Drafting Required)</span>
-                          </div>
-                          <p className="text-xs text-amber-800 m-0 leading-relaxed font-sans">
-                            Senior interviewers test independent reasoning. Spend at least 5 minutes drafting and reciting your explanation before viewing the model answer.
-                          </p>
+                          <h3 className="font-heading font-extrabold text-base text-zinc-950 mt-0.5">
+                            {challenge.title}
+                          </h3>
                         </div>
 
-                        <button
-                          type="button"
-                          disabled
-                          className="px-4 py-2 rounded-xl bg-amber-200/80 text-amber-900 text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-not-allowed flex-shrink-0"
+                        <a
+                          href={challenge.replLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-colors shadow-xs"
                         >
-                          <Lock className="w-3.5 h-3.5" />
-                          <span>Locked ({formatTimerDigits(scriptTimerSeconds)} left)</span>
-                        </button>
+                          <Terminal className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Launch Online REPL ↗</span>
+                        </a>
                       </div>
-                    ) : (
-                      /* UNLOCKED STATE: 5 minutes reached */
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xs font-mono font-bold text-emerald-800">
-                              5 Minutes Reached! Model Senior Solution Unlocked
+
+                      {/* Step-by-Step Instructions */}
+                      <div className="space-y-2">
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                          Action Items to Run:
+                        </span>
+                        <ol className="list-none p-0 m-0 space-y-1.5">
+                          {challenge.steps.map((step, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-[13px] text-zinc-800 leading-relaxed">
+                              <span className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-700 font-mono text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <span className="flex-1 font-sans">
+                                <FormattedSummary text={step} />
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+
+                      {/* Executable Code Snippet Box with Copy Button */}
+                      {challenge.codeSnippet && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                              Verification Script:
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopySnippet(challenge.codeSnippet)}
+                              className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 hover:text-zinc-950 transition-colors"
+                            >
+                              {snippetCopied ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                                  <span className="text-emerald-600 font-bold">Copied to Clipboard</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy Script</span>
+                                </>
+                              )}
+                            </button>
                           </div>
 
+                          <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#0d1117] p-3.5 font-mono text-xs sm:text-[13px] text-emerald-300 overflow-x-auto shadow-xs">
+                            <pre className="m-0 leading-relaxed whitespace-pre font-mono">
+                              {challenge.codeSnippet}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Expected Terminal Output */}
+                      {challenge.expectedOutput && (
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                            Expected Terminal Output:
+                          </span>
+                          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-700 leading-relaxed overflow-x-auto">
+                            <pre className="m-0 whitespace-pre font-mono">
+                              {challenge.expectedOutput}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Interviewer Deep-Dive Trap Question (with Reveal Button) */}
+                      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-amber-800">
+                            INTERVIEWER DEEP-DIVE QUESTION
+                          </span>
+                          
                           <button
                             type="button"
-                            onClick={() => setShowModelSolution(!showModelSolution)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-all shadow-xs"
+                            onClick={() => setShowAnswer(!showAnswer)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-amber-300 text-[11px] font-mono font-bold text-amber-900 hover:bg-amber-100 transition-colors shadow-xs"
                           >
-                            {showModelSolution ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            <span>{showModelSolution ? 'Hide Model Answer' : 'Show Model Senior Answer'}</span>
+                            {showAnswer ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            <span>{showAnswer ? 'Hide Answer' : 'Reveal Answer'}</span>
                           </button>
                         </div>
 
-                        {/* REVEALED MODEL SOLUTION */}
-                        {showModelSolution && (
-                          <div className="pt-3 border-t border-emerald-200/80 space-y-3 font-sans">
-                            <div>
-                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 block mb-1">
-                                Verbatim 60-Second Senior Spoken Script (Rehearse Out Loud):
-                              </span>
-                              <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 text-xs sm:text-sm text-zinc-900 leading-relaxed font-sans whitespace-pre-line shadow-xs">
-                                {scriptData.spokenScript}
-                              </div>
-                            </div>
+                        <p className="text-xs sm:text-sm text-zinc-900 font-medium leading-relaxed font-sans m-0">
+                          "{challenge.interviewQuestion}"
+                        </p>
 
-                            {/* Keywords to Speak & Junior Candidate Pitfall */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-                              <div className="p-3 rounded-lg bg-white border border-emerald-100 space-y-1.5">
-                                <strong className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 block">
-                                  Keywords to Speak Out Loud:
-                                </strong>
-                                <div className="flex flex-wrap gap-1">
-                                  {scriptData.buzzwords.map((w, idx) => (
-                                    <span key={idx} className="font-mono text-[11px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                      {w}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
-                                <strong className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-900 block">
-                                  Junior Pitfall to Avoid:
-                                </strong>
-                                <p className="text-zinc-800 m-0 leading-relaxed text-[11px] sm:text-xs font-sans">
-                                  {scriptData.juniorMistake}
-                                </p>
-                              </div>
-                            </div>
+                        {/* Collapsible Answer */}
+                        {showAnswer && (
+                          <div className="pt-2 border-t border-amber-200/80 text-xs sm:text-[13px] text-amber-950 leading-relaxed font-sans">
+                            <strong className="font-heading font-extrabold text-[11px] uppercase tracking-wide text-amber-900 block mb-1">
+                              Model Interview Response:
+                            </strong>
+                            <p className="m-0 leading-relaxed">
+                              {challenge.interviewAnswer}
+                            </p>
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
+
+                    </div>
+                  )}
+
+                  {/* 4. SCRIPT TAB: WITH REAL CONVERSATIONAL PROMPT, 5M COLORED CLOCK & GATED SOLUTION */}
+                  {activeTab === 'notes' && scriptData && (
+                    <div className="space-y-5">
+                      
+                      {/* Script Header with 5-Minute Colored Circular Clock on the Right */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-purple-50/60 border border-purple-200/80">
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-purple-700 bg-purple-100/90 px-2 py-0.5 rounded">
+                              STEP 4: 60-SECOND SPOKEN INTERVIEW REHEARSAL
+                            </span>
+                            {isTabChecked('notes') && (
+                              <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center gap-1">
+                                <Check className="w-3 h-3 stroke-[3]" /> Rehearsed ✓
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-zinc-900 leading-snug m-0">
+                            Top interviewers grade your spoken articulation and structured reasoning under pressure. Draft your answer, then rehearse speaking it aloud for 60 seconds.
+                          </p>
+                        </div>
+
+                        {/* 5-MINUTE SCRIPT TIMER CLOCK (Right Side) */}
+                        <div className="flex-shrink-0 flex items-center justify-center pt-2 sm:pt-0 sm:pl-3 sm:border-l sm:border-purple-200/60">
+                          <CircularTimer
+                            secondsLeft={scriptTimerSeconds}
+                            totalSeconds={SCRIPT_TIMER_SECONDS}
+                            isRunning={isScriptTimerRunning && activeTab === 'notes'}
+                            onToggleRunning={() => setIsScriptTimerRunning(!isScriptTimerRunning)}
+                            onReset={() => {
+                              setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
+                              setIsScriptTimerRunning(true);
+                            }}
+                            size={84}
+                            strokeWidth={5}
+                            colorScheme="script"
+                            label="5M Script Gate"
+                            completedLabel="UNLOCKED"
+                            subLabel={scriptTimerSeconds === 0 ? 'UNLOCKED' : isScriptTimerRunning ? 'DRAFTING' : 'PAUSED'}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Real Interviewer Conversational Prompt Box */}
+                      <div className="rounded-xl border border-zinc-200/90 bg-zinc-50/80 p-4 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-mono text-zinc-500">
+                          <div className="flex items-center gap-1.5 font-bold text-zinc-800 uppercase tracking-wider text-[11px]">
+                            <Mic className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Live Interviewer Question:</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-zinc-400">
+                            Target: 60 Seconds Out Loud
+                          </span>
+                        </div>
+
+                        <blockquote className="m-0 text-sm sm:text-[15px] font-heading font-bold text-zinc-950 leading-relaxed italic border-l-3 border-purple-600 pl-3.5">
+                          "{scriptData.prompt}"
+                        </blockquote>
+
+                        {/* 3-Point Senior Answer Blueprint */}
+                        <div className="pt-2 border-t border-zinc-200/70 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                          {scriptData.framework.map((f, i) => (
+                            <div key={i} className="p-2.5 rounded-lg bg-white border border-zinc-200/80 shadow-xs flex flex-col justify-between">
+                              <span className="font-mono font-extrabold text-purple-700 text-[10px] uppercase tracking-wider mb-1">
+                                {f.time}
+                              </span>
+                              <span className="text-zinc-700 font-sans leading-tight">
+                                {f.point}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* User's Drafting Area (Textarea) */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-zinc-500 font-mono">
+                          <span>Draft your response in your own words:</span>
+                          <span>
+                            {currentNote.trim() ? currentNote.trim().split(/\s+/).filter(Boolean).length : 0} words
+                          </span>
+                        </div>
+
+                        <textarea
+                          value={currentNote}
+                          onChange={(e) => setCurrentNote(e.target.value)}
+                          onBlur={handleSaveNote}
+                          placeholder="Draft your 60-second explanation here. Follow the 3-point blueprint: 1) Core definition, 2) Mechanism & edge cases, 3) Production guidelines..."
+                          rows={6}
+                          className="w-full text-xs sm:text-sm font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y leading-relaxed"
+                        />
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-mono text-zinc-400">
+                            Auto-checks when typed • Saves on blur
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleSaveNote}
+                            className="px-3.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors shadow-xs"
+                          >
+                            Save Script
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* GATED SENIOR DEVELOPER SOLUTION (Requires 5 minutes on the script tab) */}
+                      <div className="pt-2">
+                        {!isScriptTimerDone ? (
+                          /* LOCKED STATE: User has not spent 5 minutes drafting */
+                          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-xs font-bold font-mono text-amber-900">
+                                <Lock className="w-4 h-4 text-amber-600" />
+                                <span>Model Senior Answer Gated (5-Minute Drafting Required)</span>
+                              </div>
+                              <p className="text-xs text-amber-800 m-0 leading-relaxed font-sans">
+                                Senior interviewers test independent reasoning. Spend at least 5 minutes drafting and reciting your explanation before viewing the model answer.
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled
+                              className="px-4 py-2 rounded-xl bg-amber-200/80 text-amber-900 text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-not-allowed flex-shrink-0"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>Locked ({formatTimerDigits(scriptTimerSeconds)} left)</span>
+                            </button>
+                          </div>
+                        ) : (
+                          /* UNLOCKED STATE: 5 minutes reached */
+                          <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-xs font-mono font-bold text-emerald-800">
+                                  5 Minutes Reached! Model Senior Solution Unlocked
+                                </span>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setShowModelSolution(!showModelSolution)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-all shadow-xs"
+                              >
+                                {showModelSolution ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                <span>{showModelSolution ? 'Hide Model Answer' : 'Show Model Senior Answer'}</span>
+                              </button>
+                            </div>
+
+                            {/* REVEALED MODEL SOLUTION */}
+                            {showModelSolution && (
+                              <div className="pt-3 border-t border-emerald-200/80 space-y-3 font-sans">
+                                <div>
+                                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 block mb-1">
+                                    Verbatim 60-Second Senior Spoken Script (Rehearse Out Loud):
+                                  </span>
+                                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 text-xs sm:text-sm text-zinc-900 leading-relaxed font-sans whitespace-pre-line shadow-xs">
+                                    {scriptData.spokenScript}
+                                  </div>
+                                </div>
+
+                                {/* Keywords to Speak & Junior Candidate Pitfall */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                                  <div className="p-3 rounded-lg bg-white border border-emerald-100 space-y-1.5">
+                                    <strong className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 block">
+                                      Keywords to Speak Out Loud:
+                                    </strong>
+                                    <div className="flex flex-wrap gap-1">
+                                      {scriptData.buzzwords.map((w, idx) => (
+                                        <span key={idx} className="font-mono text-[11px] bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                          {w}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
+                                    <strong className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-900 block">
+                                      Junior Pitfall to Avoid:
+                                    </strong>
+                                    <p className="text-zinc-800 m-0 leading-relaxed text-[11px] sm:text-xs font-sans">
+                                      {scriptData.juniorMistake}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  )}
 
                 </div>
-              )}
 
-            </div>
+                {/* TAB BOTTOM ACTION BAR */}
+                <div className="mt-6 pt-3 border-t border-zinc-100 flex items-center justify-between gap-3 text-xs">
+                  
+                  {/* Check Button for the active tab */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTabCheck(activeTab)}
+                    className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-1.5 transition-colors ${
+                      isTabChecked(activeTab)
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    {isTabChecked(activeTab) ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Completed ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <Circle className="w-4 h-4 text-zinc-400" />
+                        <span>Mark this Step Done</span>
+                      </>
+                    )}
+                  </button>
 
-            {/* TAB BOTTOM ACTION BAR */}
-            <div className="mt-6 pt-3 border-t border-zinc-100 flex items-center justify-between gap-3 text-xs">
-              
-              {/* Check Button for the active tab */}
-              <button
-                type="button"
-                onClick={() => handleToggleTabCheck(activeTab)}
-                className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-1.5 transition-colors ${
-                  isTabChecked(activeTab)
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-700'
-                }`}
-              >
-                {isTabChecked(activeTab) ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Completed ✓</span>
-                  </>
-                ) : (
-                  <>
-                    <Circle className="w-4 h-4 text-zinc-400" />
-                    <span>Mark this Step Done</span>
-                  </>
-                )}
-              </button>
+                  {/* Advance to next tab button */}
+                  {questionTabs.findIndex((t) => t.id === activeTab) < questionTabs.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkTabDoneAndNext(activeTab)}
+                      className="px-3 py-1.5 rounded-lg font-semibold text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 flex items-center gap-1 transition-colors"
+                    >
+                      <span>Next Step</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
 
-              {/* Advance to next tab button */}
-              {questionTabs.findIndex((t) => t.id === activeTab) < questionTabs.length - 1 && (
-                <button
-                  type="button"
-                  onClick={() => handleMarkTabDoneAndNext(activeTab)}
-                  className="px-3 py-1.5 rounded-lg font-semibold text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 flex items-center gap-1 transition-colors"
-                >
-                  <span>Next Step</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              )}
+                </div>
+
+              </div>
 
             </div>
 
           </div>
 
         </div>
-
       </main>
 
-      {/* Clean Minimal Footer */}
-      <footer className="mt-auto px-6 py-4 border-t border-zinc-200/70 bg-white text-center text-xs text-zinc-400 font-mono">
-        Backend Dev Journey • 30-Day Interview Preparation
+      {/* Clean Minimal Full-Width Footer */}
+      <footer className="w-full mt-auto px-6 py-4 border-t border-zinc-200/70 bg-white text-center text-xs text-zinc-400 font-mono">
+        Backend Dev Journey • 30-Day Interview Preparation Workspace
       </footer>
 
     </div>

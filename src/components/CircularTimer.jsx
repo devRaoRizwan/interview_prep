@@ -14,6 +14,7 @@ export default function CircularTimer({
   completedLabel = 'DONE',
   subLabel = '',
   showControls = true,
+  showDigits = size >= 40,
   isUnlockedState = false
 }) {
   const radius = (size - strokeWidth) / 2;
@@ -107,30 +108,32 @@ export default function CircularTimer({
         </svg>
 
         {/* Center Digital Digits & Status */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-1">
-          {isCompleted ? (
-            <div className="flex flex-col items-center">
-              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-              </span>
-              <span className="text-[9px] font-mono font-extrabold text-emerald-700 tracking-wider mt-0.5 uppercase">
-                {completedLabel}
-              </span>
-            </div>
-          ) : (
-            <>
-              <span 
-                className="font-mono font-extrabold tracking-tight text-zinc-950 leading-none"
-                style={{ fontSize: size > 80 ? '14px' : '12px' }}
-              >
-                {formattedDigits}
-              </span>
-              <span className="text-[8px] font-mono font-semibold text-zinc-400 uppercase tracking-wider mt-1">
-                {subLabel || (isRunning ? 'ACTIVE' : 'PAUSED')}
-              </span>
-            </>
-          )}
-        </div>
+        {showDigits && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-1 pointer-events-none">
+            {isCompleted ? (
+              <div className="flex flex-col items-center">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </span>
+                <span className="text-[9px] font-mono font-extrabold text-emerald-700 tracking-wider mt-0.5 uppercase">
+                  {completedLabel}
+                </span>
+              </div>
+            ) : (
+              <>
+                <span 
+                  className="font-mono font-extrabold tracking-tight text-zinc-950 leading-none"
+                  style={{ fontSize: size > 80 ? '14px' : '12px' }}
+                >
+                  {formattedDigits}
+                </span>
+                <span className="text-[8px] font-mono font-semibold text-zinc-400 uppercase tracking-wider mt-1">
+                  {subLabel || (isRunning ? 'ACTIVE' : 'PAUSED')}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tactile Timer Controls */}
