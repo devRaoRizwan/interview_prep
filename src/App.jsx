@@ -3,6 +3,7 @@ import {
   TRACKS_DATA,
   TRACKS
 } from './data/questions';
+import { getQuestionChallenge, SANDBOX_LINKS } from './data/challenges';
 import YouTubePlayer from './components/YouTubePlayer';
 import CodeBlock from './components/CodeBlock';
 import { 
@@ -13,10 +14,13 @@ import {
   RotateCcw, 
   ExternalLink, 
   Clock, 
-  Flame,
-  FileText,
-  Unlock,
-  Terminal
+  Unlock, 
+  Terminal, 
+  BookOpen, 
+  Sparkles, 
+  Play, 
+  CheckCircle2, 
+  Circle 
 } from 'lucide-react';
 
 // Formatted summary with highlighted code tokens
@@ -57,7 +61,7 @@ function formatDuration(seconds) {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
-// Extract concise topic title for question chips
+// Extract concise topic title for question tabs
 function getShortQuestionTitle(question) {
   if (!question) return '';
   let title = question.title || '';
@@ -82,27 +86,27 @@ function getShortQuestionTitle(question) {
     .replace(/\?$/, '')
     .trim();
 
-  if (clean.length > 50) {
-    clean = clean.slice(0, 48) + '…';
+  if (clean.length > 40) {
+    clean = clean.slice(0, 38) + '…';
   }
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : (question.tags?.[0] || 'Question');
 }
 
-const STORAGE_PREFIX = 'backend_dev_v5_';
+const STORAGE_PREFIX = 'backend_dev_v6_';
 
 export default function App() {
   // Active track: 'django' or 'python'
   const [activeTrack, setActiveTrack] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_PREFIX + 'track');
-      return saved && TRACKS_DATA[saved] ? saved : 'django';
+      return saved && TRACKS_DATA[saved] ? saved : 'python';
     } catch {
-      return 'django';
+      return 'python';
     }
   });
 
   // Track Data
-  const currentTrack = TRACKS_DATA[activeTrack] || TRACKS_DATA.django;
+  const currentTrack = TRACKS_DATA[activeTrack] || TRACKS_DATA.python;
 
   // Active question ID per track
   const [activeQuestionId, setActiveQuestionId] = useState(() => {
@@ -137,6 +141,16 @@ export default function App() {
     }
   });
 
+  // Checklist map { [track_id_qid_step]: boolean }
+  const [checklistMap, setChecklistMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_PREFIX + 'checklist');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   // Strict lock mode
   const [strictLock, setStrictLock] = useState(() => {
     try {
@@ -148,8 +162,8 @@ export default function App() {
   });
 
   const [loopMode, setLoopMode] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
   const [currentNote, setCurrentNote] = useState('');
+  const [dayDropdownOpen, setDayDropdownOpen] = useState(false);
 
   // Persist states
   useEffect(() => {
@@ -175,6 +189,14 @@ export default function App() {
       console.warn(e);
     }
   }, [notesMap]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_PREFIX + 'checklist', JSON.stringify(checklistMap));
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [checklistMap]);
 
   useEffect(() => {
     try {
@@ -256,6 +278,15 @@ export default function App() {
     }
   }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey]);
 
+  // Toggle checklist step
+  const handleToggleChecklist = (step) => {
+    const key = `${getQuestionKey(activeTrack, currentQuestion.id)}_${step}`;
+    setChecklistMap((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   // Save note
   const handleSaveNote = () => {
     const key = getQuestionKey(activeTrack, activeQuestionId);
@@ -287,44 +318,70 @@ export default function App() {
   }, [currentTrack, completedMap, activeTrack, getQuestionKey]);
 
   const trackPercent = Math.round((completedInTrack / currentTrack.totalCount) * 100);
-
   const isCurrentCompleted = !!completedMap[getQuestionKey(activeTrack, currentQuestion.id)];
   const hasPrevious = currentQuestion.id > 1;
   const hasNext = currentQuestion.id < currentTrack.questions.length;
   const isNextUnlocked = hasNext && isQuestionUnlocked(currentQuestion.id + 1);
 
-  // Jump to specific day
+  // Day navigation
+  const currentDayIndex = currentTrack.days.findIndex((d) => d.day === currentQuestion.day);
+  const hasPrevDay = currentDayIndex > 0;
+  const hasNextDay = currentDayIndex < currentTrack.days.length - 1;
+
   const handleSelectDay = (dayNum) => {
+    setDayDropdownOpen(false);
     const dayQuestions = currentTrack.questions.filter((q) => q.day === dayNum);
     const firstUnfinished = dayQuestions.find((q) => isQuestionUnlocked(q.id) && !completedMap[getQuestionKey(activeTrack, q.id)]);
     const target = firstUnfinished || dayQuestions[0];
     setActiveQuestionId(target.id);
   };
 
+  const handlePrevDay = () => {
+    if (hasPrevDay) {
+      handleSelectDay(currentTrack.days[currentDayIndex - 1].day);
+    }
+  };
+
+  const handleNextDay = () => {
+    if (hasNextDay) {
+      handleSelectDay(currentTrack.days[currentDayIndex + 1].day);
+    }
+  };
+
+  // Curated Interview Challenge & Practice info
+  const challenge = useMemo(() => {
+    return getQuestionChallenge(activeTrack, currentQuestion);
+  }, [activeTrack, currentQuestion]);
+
+  // Checklist values for current question
+  const isWatched = !!checklistMap[`${getQuestionKey(activeTrack, currentQuestion.id)}_watched`];
+  const isCoded = !!checklistMap[`${getQuestionKey(activeTrack, currentQuestion.id)}_coded`];
+  const isSpoken = !!checklistMap[`${getQuestionKey(activeTrack, currentQuestion.id)}_spoken`];
+
   return (
-    <div className="min-h-screen bg-page text-ink flex flex-col font-sans selection:bg-black selection:text-white">
+    <div className="min-h-screen bg-[#fafafa] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
       
-      {/* 1. TOP MINIMAL BAR */}
-      <header className="border-b border-line bg-white sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+      {/* 1. MINIMAL CLEAN HEADER */}
+      <header className="border-b border-zinc-200/80 bg-white sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           
-          {/* Logo & Brand */}
+          {/* Brand */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-ink text-white font-heading font-extrabold text-xs flex items-center justify-center shadow-subtle flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-zinc-950 text-white font-mono font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-xs">
               BD
             </div>
             <div>
-              <strong className="block font-heading font-extrabold text-sm sm:text-base leading-tight tracking-tight">
+              <span className="font-heading font-extrabold text-sm tracking-tight text-zinc-950 block leading-tight">
                 Backend Dev
-              </strong>
-              <small className="hidden sm:block text-muted text-[10px] leading-tight">
-                {currentTrack.days.length}-Day Roadmap • 3 Qs / Day
-              </small>
+              </span>
+              <span className="text-[10px] text-zinc-400 font-mono block leading-none">
+                30-Day Interview Prep
+              </span>
             </div>
           </div>
 
-          {/* Track Switcher (Segmented Tab) */}
-          <div className="flex items-center p-1 rounded-xl bg-paper-muted border border-line shadow-subtle">
+          {/* Clean Segmented Track Toggle */}
+          <div className="flex items-center p-0.5 rounded-lg bg-zinc-100 border border-zinc-200/80">
             {TRACKS.map((t) => {
               const isSelected = activeTrack === t.id;
               return (
@@ -332,15 +389,15 @@ export default function App() {
                   key={t.id}
                   type="button"
                   onClick={() => handleSwitchTrack(t.id)}
-                  className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg text-xs font-bold font-heading transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1 rounded-md text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
                     isSelected
-                      ? 'comback-primary-btn shadow-subtle'
-                      : 'text-muted hover:text-ink'
+                      ? 'bg-white text-zinc-950 shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800'
                   }`}
                 >
-                  <span className="text-xs">{t.icon}</span>
+                  <span>{t.icon}</span>
                   <span>{t.name}</span>
-                  <span className="hidden md:inline text-[10px] opacity-75 font-normal">
+                  <span className="text-[10px] font-mono opacity-60">
                     ({TRACKS_DATA[t.id].totalCount})
                   </span>
                 </button>
@@ -348,145 +405,128 @@ export default function App() {
             })}
           </div>
 
-          {/* Progress & Reset */}
+          {/* Progress & Controls */}
           <div className="flex items-center gap-2">
-            <div className="px-2.5 py-1 rounded-lg border border-line bg-paper-muted text-xs font-mono font-bold text-ink hidden sm:flex items-center gap-1.5 shadow-subtle">
-              <span>{completedInTrack}/{currentTrack.totalCount}</span>
-              <span className="text-muted font-sans font-normal text-[11px]">({trackPercent}%)</span>
+            <div className="text-xs font-mono text-zinc-500 hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 border border-zinc-200/60">
+              <span className="font-bold text-zinc-950">{completedInTrack}/{currentTrack.totalCount}</span>
+              <span className="text-zinc-400">({trackPercent}%)</span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setStrictLock(!strictLock)}
+              title={strictLock ? 'Strict Lock: ON (Sequential)' : 'Strict Lock: OFF (Free Nav)'}
+              className={`p-1.5 rounded-md border text-xs transition-colors flex items-center gap-1 ${
+                strictLock 
+                  ? 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50' 
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              }`}
+            >
+              {strictLock ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5 text-emerald-600" />}
+            </button>
 
             <button
               type="button"
               onClick={handleResetTrack}
-              title="Reset progress for this track"
-              className="p-1.5 rounded-lg border border-line text-muted hover:text-red-600 hover:bg-paper-muted transition-colors"
+              title="Reset progress"
+              className="p-1.5 rounded-md border border-zinc-200 bg-white text-zinc-400 hover:text-red-600 hover:bg-zinc-50 transition-colors"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
+
         </div>
       </header>
 
-      {/* 2. PROPER DAY SELECTOR CHIPS BAR */}
-      <nav className="border-b border-line bg-white/80 backdrop-blur-md sticky top-14 sm:top-16 z-20 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted flex-shrink-0 mr-1 hidden md:inline-block">
-            DAYS:
-          </span>
-          {currentTrack.days.map((d) => {
-            const dayQuestions = currentTrack.questions.filter((q) => q.day === d.day);
-            const done = dayQuestions.filter((q) => !!completedMap[getQuestionKey(activeTrack, q.id)]).length;
-            const isSelected = currentQuestion.day === d.day;
-            const isComplete = done === dayQuestions.length;
-            const isUnlocked = isQuestionUnlocked(dayQuestions[0].id);
-
-            return (
-              <button
-                key={d.day}
-                type="button"
-                onClick={() => handleSelectDay(d.day)}
-                disabled={!isUnlocked}
-                title={`Day ${d.day}: ${d.title} (${done}/${dayQuestions.length} completed)`}
-                className={`group flex-shrink-0 h-8 sm:h-8.5 px-3 rounded-full border text-xs font-heading font-semibold transition-all duration-150 flex items-center gap-2 select-none ${
-                  isSelected
-                    ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-zinc-950/15'
-                    : isComplete
-                    ? 'bg-emerald-50 text-emerald-950 border-emerald-200/90 hover:bg-emerald-100 hover:border-emerald-300 shadow-xs'
-                    : !isUnlocked
-                    ? 'bg-zinc-100/60 text-zinc-400 border-zinc-200/50 cursor-not-allowed opacity-50'
-                    : 'bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 shadow-xs'
-                }`}
-              >
-                {/* Status Indicator Icon / Day Number Badge */}
-                <span
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-colors ${
-                    isSelected
-                      ? isComplete
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-white/20 text-white'
-                      : isComplete
-                      ? 'bg-emerald-600 text-white'
-                      : !isUnlocked
-                      ? 'bg-zinc-200 text-zinc-400'
-                      : 'bg-zinc-100 text-zinc-700 group-hover:bg-zinc-200'
-                  }`}
-                >
-                  {isComplete ? (
-                    <Check className="w-2.5 h-2.5 stroke-[3]" />
-                  ) : !isUnlocked ? (
-                    <Lock className="w-2.5 h-2.5" />
-                  ) : (
-                    d.day
-                  )}
-                </span>
-
-                {/* Day Label */}
-                <span className="whitespace-nowrap">Day {d.day}</span>
-
-                {/* Progress fraction badge */}
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : isComplete
-                      ? 'bg-emerald-200/60 text-emerald-800'
-                      : !isUnlocked
-                      ? 'text-zinc-400'
-                      : 'bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200/70 group-hover:text-zinc-700'
-                  }`}
-                >
-                  {done}/{dayQuestions.length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      {/* 3. PROPER QUESTION CHIPS BAR (ACTIVE DAY) */}
-      <div className="bg-paper-muted border-b border-line">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      {/* 2. SIMPLE, CLEAN DAY & QUESTION NAVIGATION (ZERO CLUTTER) */}
+      <div className="border-b border-zinc-200 bg-white sticky top-14 z-20 shadow-xs">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
           
-          {/* Day Title & Lock Toggle Header */}
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-line text-[10px] font-extrabold uppercase tracking-wider text-muted font-mono shadow-xs">
-                DAY {currentQuestion.day} OF {currentTrack.days.length}
-              </span>
-              <span className="text-xs sm:text-sm font-heading font-bold text-ink truncate">
-                {currentDayInfo.title}
-              </span>
-            </div>
-
-            {/* Strict Lock Mode Toggle */}
+          {/* Day Stepper & Title with Dropdown */}
+          <div className="relative flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setStrictLock(!strictLock)}
-              title="Toggle strict sequential locking"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-line bg-white hover:bg-zinc-50 text-[11px] font-bold text-muted hover:text-ink transition-colors shadow-xs"
+              onClick={handlePrevDay}
+              disabled={!hasPrevDay}
+              className="p-1 rounded-md border border-zinc-200 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Previous Day"
             >
-              {strictLock ? (
-                <>
-                  <Lock className="w-3 h-3 text-muted" />
-                  <span>Strict Lock: <strong className="text-ink">ON</strong></span>
-                </>
-              ) : (
-                <>
-                  <Unlock className="w-3 h-3 text-signal-ink" />
-                  <span>Strict Lock: <strong className="text-signal-ink">OFF</strong></span>
-                </>
+              <ChevronLeft className="w-4 h-4 text-zinc-700" />
+            </button>
+
+            {/* Current Day Trigger Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setDayDropdownOpen(!dayDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-1 rounded-lg border border-zinc-200 hover:border-zinc-300 bg-zinc-50 hover:bg-zinc-100 transition-colors text-xs"
+              >
+                <span className="font-mono font-bold text-zinc-950">
+                  Day {currentQuestion.day}/{currentTrack.days.length}
+                </span>
+                <span className="text-zinc-400">•</span>
+                <span className="font-heading font-semibold text-zinc-800 max-w-[160px] sm:max-w-[260px] truncate">
+                  {currentDayInfo.title}
+                </span>
+                <span className="text-zinc-400 text-[10px]">▼</span>
+              </button>
+
+              {/* Minimal Clean Day Selector Dropdown */}
+              {dayDropdownOpen && (
+                <div 
+                  className="absolute left-0 top-full mt-1.5 w-72 max-h-80 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-xl z-50 p-1.5 space-y-0.5"
+                  onMouseLeave={() => setDayDropdownOpen(false)}
+                >
+                  <div className="px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                    Jump to Day
+                  </div>
+                  {currentTrack.days.map((d) => {
+                    const dQuestions = currentTrack.questions.filter((q) => q.day === d.day);
+                    const dDone = dQuestions.filter((q) => !!completedMap[getQuestionKey(activeTrack, q.id)]).length;
+                    const isSelected = currentQuestion.day === d.day;
+                    const isComplete = dDone === dQuestions.length;
+
+                    return (
+                      <button
+                        key={d.day}
+                        type="button"
+                        onClick={() => handleSelectDay(d.day)}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between gap-2 transition-colors ${
+                          isSelected
+                            ? 'bg-zinc-900 text-white font-bold'
+                            : 'hover:bg-zinc-100 text-zinc-800'
+                        }`}
+                      >
+                        <span className="truncate">
+                          <strong className="font-mono">Day {d.day}:</strong> {d.title}
+                        </span>
+                        <span className={`text-[10px] font-mono flex-shrink-0 ${isSelected ? 'text-zinc-300' : 'text-zinc-400'}`}>
+                          {isComplete ? '✓ 3/3' : `${dDone}/3`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextDay}
+              disabled={!hasNextDay}
+              className="p-1 rounded-md border border-zinc-200 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Next Day"
+            >
+              <ChevronRight className="w-4 h-4 text-zinc-700" />
             </button>
           </div>
 
-          {/* The 3 Proper Question Chips */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+          {/* Today's 3 Questions as Clean Minimalist Tabs */}
+          <div className="flex items-center gap-1.5">
             {questionsInCurrentDay.map((q, idx) => {
               const isSelected = currentQuestion.id === q.id;
               const isDone = !!completedMap[getQuestionKey(activeTrack, q.id)];
               const isUnlocked = isQuestionUnlocked(q.id);
-              const shortTopic = getShortQuestionTitle(q);
-              const durationSec = q.endSeconds - q.startSeconds;
 
               return (
                 <button
@@ -494,76 +534,29 @@ export default function App() {
                   type="button"
                   disabled={!isUnlocked}
                   onClick={() => setActiveQuestionId(q.id)}
-                  className={`group flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl sm:rounded-full border text-xs transition-all duration-150 select-none text-left ${
+                  className={`px-3 py-1 rounded-md text-xs font-heading font-semibold transition-all flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-zinc-950 text-white border-zinc-950 shadow-sm ring-2 ring-zinc-950/15'
+                      ? 'bg-zinc-950 text-white shadow-xs'
                       : isDone
-                      ? 'bg-emerald-50 text-emerald-950 border-emerald-200/90 hover:bg-emerald-100 hover:border-emerald-300 shadow-xs'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
                       : !isUnlocked
-                      ? 'bg-zinc-100/60 text-zinc-400 border-zinc-200/50 cursor-not-allowed opacity-50'
-                      : 'bg-white text-zinc-800 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 shadow-xs'
+                      ? 'text-zinc-300 cursor-not-allowed'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200/80 hover:text-zinc-900'
                   }`}
                 >
-                  {/* Left: Avatar Badge & Labels */}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold flex-shrink-0 transition-colors ${
-                        isSelected
-                          ? isDone
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-white text-zinc-950'
-                          : isDone
-                          ? 'bg-emerald-600 text-white'
-                          : !isUnlocked
-                          ? 'bg-zinc-200 text-zinc-400'
-                          : 'bg-zinc-100 text-zinc-700 group-hover:bg-zinc-200'
-                      }`}
-                    >
-                      {isDone ? (
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      ) : !isUnlocked ? (
-                        <Lock className="w-2.5 h-2.5" />
-                      ) : (
-                        `Q${idx + 1}`
-                      )}
+                  {isDone ? (
+                    <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                  ) : !isUnlocked ? (
+                    <Lock className="w-2.5 h-2.5 opacity-40" />
+                  ) : (
+                    <span className="font-mono font-bold text-[11px] opacity-70">
+                      {idx + 1}.
                     </span>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-heading font-extrabold text-xs">
-                          Q{idx + 1}
-                        </span>
-                        <span className="text-[10px] font-mono opacity-60">
-                          #{q.id}
-                        </span>
-                      </div>
-                      <p className={`text-[11px] truncate max-w-[200px] sm:max-w-[180px] md:max-w-[240px] lg:max-w-[280px] xl:max-w-[340px] ${
-                        isSelected ? 'text-zinc-300' : isDone ? 'text-emerald-800/80' : 'text-zinc-500'
-                      }`}>
-                        {shortTopic}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right: Duration Pill / Active Signal */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {isSelected && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    )}
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
-                        isSelected
-                          ? 'bg-white/20 text-white'
-                          : isDone
-                          ? 'bg-emerald-200/60 text-emerald-800'
-                          : !isUnlocked
-                          ? 'text-zinc-400'
-                          : 'bg-zinc-100 text-zinc-600 group-hover:bg-zinc-200/80'
-                      }`}
-                    >
-                      {formatDuration(durationSec)}
-                    </span>
-                  </div>
+                  )}
+                  <span>Q{idx + 1}</span>
+                  <span className="hidden md:inline text-[11px] font-normal opacity-80 max-w-[120px] truncate">
+                    {getShortQuestionTitle(q)}
+                  </span>
                 </button>
               );
             })}
@@ -572,56 +565,48 @@ export default function App() {
         </div>
       </div>
 
-      {/* 4. MAIN EXPANSIVE WORKSPACE (2-COLUMN ON DESKTOP, USES FULL SCREEN SPACE) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* 3. FOCUSED 2-COLUMN STUDY & PRACTICE WORKSPACE */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-          {/* LEFT COLUMN: FOCUSED VIDEO STATION & CONTROLS (7 of 12 cols on desktop) */}
+          {/* LEFT COLUMN: FOCUSED VIDEO STATION & COMPLETION (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            <section className="comback-card overflow-hidden">
+            
+            {/* Main Video & Active Question Card */}
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
               
-              {/* Question Title & Meta Strip */}
-              <div className="p-5 sm:p-6 pb-4 border-b border-line">
-                <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-extrabold uppercase tracking-wider text-ink font-heading shadow-xs">
-                      <span>{currentTrack.icon}</span>
-                      <span>{currentTrack.name}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
-                      Day {currentQuestion.day}
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-paper-muted border border-line text-[10px] font-bold text-muted font-mono shadow-xs">
-                      Q{currentQuestion.dayIndex} (#{currentQuestion.id})
-                    </span>
-                  </div>
-
+              {/* Question Header Strip */}
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-xs font-mono text-muted bg-paper-muted px-2.5 py-0.5 rounded-full border border-line shadow-xs">
-                      <Clock className="w-3.5 h-3.5 text-muted" />
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                      DAY {currentQuestion.day} • Q{currentQuestion.dayIndex}
+                    </span>
+                    <span className="text-xs font-mono text-zinc-500 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-zinc-400" />
                       {currentQuestion.startTime} — {currentQuestion.endTime} ({formatDuration(currentQuestion.endSeconds - currentQuestion.startSeconds)})
                     </span>
-
-                    {isCurrentCompleted ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-signal-ink bg-signal-pale border border-signal-border px-2.5 py-0.5 rounded-full">
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        Mastered
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted bg-paper-muted border border-line px-2.5 py-0.5 rounded-full shadow-xs">
-                        Pending
-                      </span>
-                    )}
                   </div>
+
+                  {isCurrentCompleted ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                      Mastered
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-zinc-400 bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-full">
+                      In Progress
+                    </span>
+                  )}
                 </div>
 
-                <h1 className="m-0 font-heading font-extrabold text-xl sm:text-2xl text-ink tracking-tight leading-snug">
+                <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-zinc-950 tracking-tight leading-snug">
                   {currentQuestion.title}
                 </h1>
               </div>
 
-              {/* Embedded YouTube Player: strictly plays only this particular question part */}
-              <div className="p-4 sm:p-6 pb-3">
+              {/* YouTube Player */}
+              <div className="rounded-xl overflow-hidden border border-zinc-200 bg-black">
                 <YouTubePlayer
                   key={`${activeTrack}-${currentQuestion.id}`}
                   currentQuestion={currentQuestion}
@@ -633,172 +618,247 @@ export default function App() {
                 />
               </div>
 
-              {/* Primary Completion Button */}
-              <div className="px-4 sm:px-6 py-4 bg-paper-muted border-t border-b border-line flex flex-wrap items-center justify-between gap-3">
+              {/* Primary Action Button */}
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => handleToggleComplete(currentQuestion.id)}
-                  className={`w-full sm:w-auto px-5 py-2.5 text-sm flex items-center justify-center gap-2.5 ${
+                  className={`w-full py-3 rounded-xl font-heading font-bold text-sm transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm ${
                     isCurrentCompleted
-                      ? 'comback-completed-btn'
-                      : 'comback-primary-btn'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-zinc-950 hover:bg-black text-white'
                   }`}
                 >
-                  <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${
-                    isCurrentCompleted 
-                      ? 'border-signal-border bg-signal-ink text-white' 
-                      : 'border-white/40 bg-white/10 text-white'
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                    isCurrentCompleted ? 'bg-white/20' : 'bg-white/10'
                   }`}>
-                    {isCurrentCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    {isCurrentCompleted ? (
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    ) : (
+                      <Play className="w-2.5 h-2.5 fill-white ml-0.5" />
+                    )}
                   </div>
                   <span>
                     {isCurrentCompleted 
                       ? '✓ Mastered! Click to Mark Incomplete' 
-                      : 'Mark as Done & Unlock Next Question →'}
+                      : 'Mark Done & Unlock Next Question →'}
                   </span>
                 </button>
+              </div>
 
-                <div className="text-xs text-muted font-medium">
-                  {isNextUnlocked && hasNext && (
-                    <span className="text-signal-ink font-bold">✓ Question #{currentQuestion.id + 1} unlocked</span>
-                  )}
+              {/* Interactive Practice & Rehearsal Checklist */}
+              <div className="pt-3 border-t border-zinc-100">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                  ACTIVE RECALL & PRACTICE CHECKLIST
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleToggleChecklist('watched')}
+                    className={`px-3 py-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
+                      isWatched 
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 font-semibold' 
+                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
+                    }`}
+                  >
+                    {isWatched ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-400 flex-shrink-0" />}
+                    <span>1. Watched Clip</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleChecklist('coded')}
+                    className={`px-3 py-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
+                      isCoded 
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 font-semibold' 
+                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
+                    }`}
+                  >
+                    {isCoded ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-400 flex-shrink-0" />}
+                    <span>2. Ran Code in REPL</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleChecklist('spoken')}
+                    className={`px-3 py-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
+                      isSpoken 
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900 font-semibold' 
+                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
+                    }`}
+                  >
+                    {isSpoken ? <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <Circle className="w-4 h-4 text-zinc-400 flex-shrink-0" />}
+                    <span>3. Answered Out Loud</span>
+                  </button>
+
                 </div>
               </div>
 
-              {/* Prev / Next Navigation Footer */}
-              <div className="px-5 sm:px-6 py-3.5 bg-paper-muted flex items-center justify-between gap-3">
+              {/* Prev / Next Bottom Controls */}
+              <div className="pt-2 flex items-center justify-between text-xs text-zinc-500">
                 <button
                   type="button"
                   onClick={() => hasPrevious && setActiveQuestionId(currentQuestion.id - 1)}
                   disabled={!hasPrevious}
-                  className="comback-button px-3.5 py-2 text-xs flex items-center gap-1.5"
+                  className="inline-flex items-center gap-1 font-semibold text-zinc-600 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span>Previous</span>
                 </button>
 
-                <span className="text-xs text-muted font-medium font-mono">
-                  Question {currentQuestion.id} of {currentTrack.totalCount}
+                <span className="font-mono text-zinc-400">
+                  Question #{currentQuestion.id} of {currentTrack.totalCount}
                 </span>
 
                 <button
                   type="button"
                   onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
                   disabled={!hasNext || !isNextUnlocked}
-                  className={`px-3.5 py-2 text-xs flex items-center gap-1.5 ${
-                    !isNextUnlocked && hasNext 
-                      ? 'comback-button opacity-50 cursor-not-allowed' 
-                      : 'comback-primary-btn'
-                  }`}
+                  className="inline-flex items-center gap-1 font-semibold text-zinc-600 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <span>Next</span>
-                  {!isNextUnlocked && hasNext ? (
-                    <Lock className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-            </section>
+
+            </div>
+
           </div>
 
-          {/* RIGHT COLUMN: STUDY COMPANION, CODE SYNTAX, DOCS & NOTES (5 of 12 cols on desktop) */}
+          {/* RIGHT COLUMN: INTERACTIVE PRACTICE, CHALLENGE & REPL (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
             
-            {/* Syntax & Command Reference */}
-            {currentQuestion.tip && (
-              <div className="comback-card p-5">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
-                    SYNTAX & COMMAND REFERENCE
+            {/* 1. Hands-On Interview Coding Challenge (ENGAGING PRACTICE) */}
+            {challenge && (
+              <div className="rounded-2xl border border-zinc-900 bg-zinc-950 text-white p-5 shadow-sm space-y-3.5">
+                <div className="flex items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span className="font-heading font-extrabold text-xs tracking-tight text-white uppercase">
+                      HANDS-ON INTERVIEW CHALLENGE
+                    </span>
+                  </div>
+                  
+                  {/* Direct Launch REPL Button */}
+                  <a
+                    href={challenge.replLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-400 hover:bg-amber-300 text-zinc-950 text-[11px] font-mono font-bold transition-colors shadow-xs"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    <span>Launch REPL</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+
+                {/* Practical Task */}
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-1">
+                    PRACTICE TASK:
+                  </span>
+                  <p className="text-xs text-zinc-200 leading-relaxed font-sans font-medium">
+                    {challenge.task}
                   </p>
-                  <span className="text-[10px] font-mono font-bold text-muted uppercase bg-paper-muted px-2 py-0.5 rounded-full border border-line">
-                    Quick Recall
+                </div>
+
+                {/* Interviewer Trap / Follow-up */}
+                <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold block mb-1">
+                    INTERVIEWER TRAP QUESTION:
+                  </span>
+                  <p className="text-xs text-zinc-300 italic leading-relaxed">
+                    "{challenge.followUp}"
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Code & Syntax Reference */}
+            {currentQuestion.tip && (
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-5 shadow-xs">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                    SYNTAX & COMMAND REFERENCE
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    Quick Copy
                   </span>
                 </div>
                 <CodeBlock code={currentQuestion.tip} />
               </div>
             )}
 
-            {/* Core Interview Takeaway */}
-            <div className="comback-card p-5">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">
-                CORE INTERVIEW TAKEAWAY
-              </p>
-              <div className="text-sm text-ink/90 leading-relaxed font-sans">
+            {/* 3. Core Interview Takeaway */}
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-2">
+                CORE TECHNICAL EXPLANATION
+              </span>
+              <div className="text-xs sm:text-sm text-zinc-700 leading-relaxed font-sans">
                 <FormattedSummary text={currentQuestion.summary} />
               </div>
             </div>
 
-            {/* In-Depth Official Reading & Documentation */}
-            <div className="comback-card p-5">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2.5">
-                IN-DEPTH READING & OFFICIAL DOCUMENTATION
-              </p>
-              <div className="grid grid-cols-1 gap-2.5">
+            {/* 4. Official Documentation & In-Depth Reading Links */}
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                  DOCUMENTATION & PRACTICE LINKS
+                </span>
+                <BookOpen className="w-3.5 h-3.5 text-zinc-400" />
+              </div>
+
+              <div className="space-y-2">
                 {currentQuestion.articles.map((art, idx) => (
                   <a
                     key={idx}
                     href={art.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="comback-button p-3 flex items-start justify-between gap-3 text-left group"
+                    className="p-2.5 rounded-xl border border-zinc-200/90 hover:border-zinc-300 hover:bg-zinc-50 flex items-center justify-between gap-3 text-left transition-colors group"
                   >
                     <div className="min-w-0">
-                      <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider block">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
                         {art.source}
                       </span>
-                      <strong className="text-xs font-bold font-heading text-ink group-hover:text-ink block mt-0.5 line-clamp-1">
+                      <strong className="text-xs font-semibold text-zinc-900 group-hover:text-black block truncate">
                         {art.title}
                       </strong>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-muted group-hover:text-ink flex-shrink-0 mt-1" />
+                    <ExternalLink className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-950 flex-shrink-0" />
                   </a>
                 ))}
               </div>
             </div>
 
-            {/* Personal Study Notes */}
-            <div className="comback-card p-5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted">
-                  YOUR INTERVIEW NOTES
-                </p>
-                <span className="text-[10px] text-muted font-mono">
+            {/* 5. Personal Interview Rehearsal Notes */}
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                  MY SPOKEN ANSWER / SCRIPT
+                </span>
+                <span className="text-[10px] font-mono text-zinc-400">
                   Auto-saved
                 </span>
               </div>
-
               <textarea
                 value={currentNote}
                 onChange={(e) => setCurrentNote(e.target.value)}
                 onBlur={handleSaveNote}
-                placeholder="Write your explanation, syntax reminders, or interview answers here while watching..."
-                rows={4}
-                className="w-full text-xs font-sans bg-white border border-line-strong rounded-xl p-3 text-ink focus:outline-none focus:border-ink transition-colors placeholder:text-muted resize-y shadow-subtle"
+                placeholder="Write your 60-second explanation here as if answering an interviewer live..."
+                rows={3}
+                className="w-full text-xs font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y"
               />
-              <div className="flex justify-end mt-2">
+              <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={handleSaveNote}
-                  className="comback-button px-3.5 py-1 text-xs font-bold"
+                  className="px-3 py-1 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-xs font-semibold text-zinc-800 transition-colors"
                 >
-                  Save Note
+                  Save Script
                 </button>
               </div>
-            </div>
-
-            {/* Motivational Habit Footer Banner */}
-            <div className="comback-card p-3.5 text-xs text-muted flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                <span>
-                  <strong>Pace:</strong> 3 questions each day. Finish all {currentTrack.totalCount} {currentTrack.name} questions in {currentTrack.days.length} days!
-                </span>
-              </div>
-              <span className="text-ink font-bold font-mono text-xs flex-shrink-0">
-                Day {currentQuestion.day}/{currentTrack.days.length}
-              </span>
             </div>
 
           </div>
@@ -806,9 +866,9 @@ export default function App() {
         </div>
       </main>
 
-      {/* Clean Minimal Page Footer */}
-      <footer className="mt-auto px-6 py-4 border-t border-line bg-white text-center text-xs text-muted">
-        Backend Dev Journey • Progress and notes are saved automatically in your browser.
+      {/* Clean Minimal Footer */}
+      <footer className="mt-auto px-6 py-4 border-t border-zinc-200 bg-white text-center text-xs text-zinc-400 font-mono">
+        Backend Dev Journey • 30-Day Interview Preparation
       </footer>
 
     </div>
