@@ -172,3 +172,4 @@ export function DocTable({ headers = [], rows = [] }) {
     </div>
   );
 }
+
