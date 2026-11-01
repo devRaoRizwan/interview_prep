@@ -1,210 +1,326 @@
-// Curated interview coding challenges, interviewer follow-up trap questions, and interactive practice sandbox links
+// Curated interview coding challenges, starter code, expected output, and interviewer deep-dive questions
 
 export const SANDBOX_LINKS = {
   python: 'https://onecompiler.com/python',
   django: 'https://docs.djangoproject.com/en/stable/',
   postgres: 'https://onecompiler.com/postgresql',
-  regex: 'https://regex101.com/',
   pythonDocs: 'https://docs.python.org/3/',
 };
 
-// Map question concepts to practical interview coding tasks and interviewer follow-up questions
 export function getQuestionChallenge(trackId, question) {
   if (!question) return null;
 
   const titleLower = (question.title || '').toLowerCase();
-  const summaryLower = (question.summary || '').toLowerCase();
+  const qId = question.id;
 
-  // Python Track Challenges
+  // --- PYTHON TRACK CHALLENGES ---
   if (trackId === 'python') {
-    if (titleLower.includes('list and tuple') || titleLower.includes('list vs tuple')) {
+    // Q1: List vs Tuple
+    if (titleLower.includes('list and tuple') || titleLower.includes('list vs tuple') || qId === 1) {
       return {
-        task: 'Open your terminal/REPL: 1) Try using a list as a dictionary key: `d = {[1, 2]: "val"}`. Observe the TypeError. 2) Try using a tuple: `d = {(1, 2): "val"}`. 3) What happens if the tuple contains a list: `t = (1, [2, 3])`? Can it be a dict key?',
-        followUp: 'Why is a tuple with a list inside it not hashable even though tuples are immutable? (Answer: All elements inside the tuple must also be hashable for hash(t) to work).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Python REPL & Memory'
+        title: 'Memory Overhead & Dict Key Hashability',
+        steps: [
+          'Verify mutability: Create a list `a = [1, 2]` and tuple `b = (1, 2)`. Attempt `a.append(3)` vs `b.append(3)`.',
+          'Test Hashability: Attempt to use a list as a dict key `{[1, 2]: "val"}` and observe the exact TypeError.',
+          'Verify Tuple Key: Attempt using `b = (1, 2)` as a dict key. Observe why it succeeds.',
+          'The Inner Mutability Trap: Construct a tuple containing an inner mutable list `t = (1, [2, 3])`. Try using `t` as a dict key.'
+        ],
+        codeSnippet: `# 1. Test Mutability
+a = [1, 2]
+b = (1, 2)
+a.append(3)
+print("Modified List:", a)
+
+# 2. Try List as Dict Key (Fails)
+try:
+    d = {[1, 2]: "item"}
+except TypeError as err:
+    print("List as Key Error:", err)
+
+# 3. Tuple as Dict Key (Succeeds)
+d = {(1, 2): "item"}
+print("Tuple as Key:", d)
+
+# 4. Nested Tuple with Inner List (Fails)
+try:
+    t = (1, [2, 3])
+    d = {t: "item"}
+except TypeError as err:
+    print("Nested Tuple Error:", err)`,
+        expectedOutput: `Modified List: [1, 2, 3]
+List as Key Error: unhashable type: 'list'
+Tuple as Key: {(1, 2): 'item'}
+Nested Tuple Error: unhashable type: 'list'`,
+        interviewQuestion: 'Why is a tuple with a list inside it not hashable even though tuples are immutable?',
+        interviewAnswer: 'In Python, an object is hashable only if its hash value never changes during its lifetime and all of its items are also hashable. While the outer tuple container is immutable, it recursively computes its hash from its elements. Because the inner list is mutable and lacks a valid __hash__() method, the tuple fails the hash() check and raises TypeError: unhashable type: "list".',
+        replLink: 'https://onecompiler.com/python'
       };
     }
-    if (titleLower.includes('decorator')) {
+
+    // Q2: Decorators
+    if (titleLower.includes('decorator') || qId === 2) {
       return {
-        task: 'Write a decorator `@timer` from scratch that uses `time.perf_counter()` to measure and print the execution time of any function. Apply it to a function that sums 1,000,000 numbers.',
-        followUp: 'Why MUST you use `@functools.wraps(func)` inside your decorator? What happens to `func.__name__` and `func.__doc__` if you omit it?',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Decorator Implementation'
+        title: 'Building a Production Performance Timing Decorator',
+        steps: [
+          'Import `time` and `functools.wraps`.',
+          'Write a decorator function `@timing_decorator` that records `time.perf_counter()` before and after calling `func(*args, **kwargs)`.',
+          'Print the execution time in milliseconds and return the original function output.',
+          'Apply the decorator to a heavy mathematical computation (e.g. summing 10,000,000 numbers).',
+          'Inspect `heavy_calc.__name__` and `heavy_calc.__doc__` to verify metadata preservation.'
+        ],
+        codeSnippet: `import time
+from functools import wraps
+
+def timing_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration_ms = (time.perf_counter() - start) * 1000
+        print(f"[METRIC] {func.__name__} executed in {duration_ms:.2f}ms")
+        return result
+    return wrapper
+
+@timing_decorator
+def compute_sum(n):
+    """Computes the sum of numbers up to n."""
+    return sum(range(n))
+
+# Run function
+total = compute_sum(5_000_000)
+print("Result:", total)
+print("Function Name Preserved:", compute_sum.__name__)`,
+        expectedOutput: `[METRIC] compute_sum executed in ~150.00ms
+Result: 12499997500000
+Function Name Preserved: compute_sum`,
+        interviewQuestion: 'What happens if you omit @functools.wraps(func) inside your custom decorator?',
+        interviewAnswer: 'Without @functools.wraps(func), the decorated function loses its identity. Its __name__ attribute becomes "wrapper" instead of the original function name, and its docstring (__doc__) and signature are replaced by wrapper metadata. This breaks introspection, logging frameworks, documentation generators (Sphinx), and debugging tools.',
+        replLink: 'https://onecompiler.com/python'
       };
     }
-    if (titleLower.includes('comprehension')) {
+
+    // Q3: List vs Dict Comprehension
+    if (titleLower.includes('comprehension') || qId === 3) {
       return {
-        task: 'Given a list of words `["apple", "banana", "cherry"]`, write: 1) A list comprehension of their lengths, 2) A dict comprehension mapping each word to its uppercase version, 3) Compare memory usage with a generator expression `(len(w) for w in words)`.',
-        followUp: 'When would you prefer a generator expression `(...)` over a list comprehension `[...]`? (Answer: When dealing with large streams/files to avoid loading everything into RAM).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Comprehensions & Generators'
+        title: 'Transforming Collections & Memory Benchmark',
+        steps: [
+          'Given a list of backend user tuples: `[("alice", 28), ("bob", 34), ("charlie", 22)]`.',
+          'Write a List Comprehension to filter users older than 25 and convert their names to uppercase.',
+          'Write a Dict Comprehension mapping `username: age` for all active users.',
+          'Compare memory size between a List Comprehension `[...]` and a Generator Expression `(...)` using `sys.getsizeof`.'
+        ],
+        codeSnippet: `import sys
+
+users = [("alice", 28), ("bob", 34), ("charlie", 22)]
+
+# 1. List Comprehension
+filtered_names = [name.upper() for name, age in users if age > 25]
+print("Filtered List:", filtered_names)
+
+# 2. Dict Comprehension
+user_dict = {name: age for name, age in users}
+print("User Dict:", user_dict)
+
+# 3. Memory Benchmark: List vs Generator
+large_range = range(100_000)
+list_comp = [x * 2 for x in large_range]
+gen_exp = (x * 2 for x in large_range)
+
+print(f"List Size: {sys.getsizeof(list_comp):,} bytes")
+print(f"Generator Size: {sys.getsizeof(gen_exp):,} bytes")`,
+        expectedOutput: `Filtered List: ['ALICE', 'BOB']
+User Dict: {'alice': 28, 'bob': 34, 'charlie': 22}
+List Size: ~800,984 bytes
+Generator Size: ~104 bytes`,
+        interviewQuestion: 'When would you deliberately choose a generator expression over a list comprehension in a backend API?',
+        interviewAnswer: 'When streaming or processing massive datasets (such as parsing gigabyte database query results, reading multi-megabyte log files, or streaming CSVs). A list comprehension allocates all objects in memory immediately, causing Out-Of-Memory (OOM) crashes. A generator computes items lazily on demand one by one with constant O(1) memory overhead.',
+        replLink: 'https://onecompiler.com/python'
       };
     }
-    if (titleLower.includes('memory management')) {
+
+    // Q4: Memory Management
+    if (titleLower.includes('memory') || qId === 4) {
       return {
-        task: 'Import `sys` and check reference counts: `a = [1, 2, 3]`; print `sys.getrefcount(a)`. Then assign `b = a` and print again. Create a circular reference: `a.append(a)` and explain how garbage collection handles it.',
-        followUp: 'Why can reference counting alone fail to reclaim memory? What role does the Generational Cyclic Garbage Collector play in Python?',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Memory & GC Internals'
+        title: 'Reference Counting & Circular Reference Garbage Collection',
+        steps: [
+          'Import `sys` and `gc`.',
+          'Create an object `a = [1, 2, 3]` and inspect its initial reference count with `sys.getrefcount(a)`.',
+          'Create a second alias `b = a` and observe the reference count increase.',
+          'Create a circular reference `a.append(a)` and `del a, b`. Explain why reference counting fails and cyclic GC is required.'
+        ],
+        codeSnippet: `import sys
+import gc
+
+# 1. Reference Counting
+x = ["backend", "data"]
+print("Initial ref count:", sys.getrefcount(x)) # Note: getrefcount adds 1 temporary ref
+
+y = x
+print("After second reference:", sys.getrefcount(x))
+
+del y
+print("After deleting y:", sys.getrefcount(x))
+
+# 2. Circular Reference
+class Node:
+    def __init__(self, name):
+        self.name = name
+        self.peer = None
+
+n1 = Node("A")
+n2 = Node("B")
+n1.peer = n2
+n2.peer = n1  # Cycle created
+
+del n1
+del n2  # Reference count is 1 for each (circular)!
+print("Uncollected cyclic objects before gc.collect():", gc.collect())`,
+        expectedOutput: `Initial ref count: 2
+After second reference: 3
+After deleting y: 2
+Uncollected cyclic objects before gc.collect(): 2 (or more)`,
+        interviewQuestion: 'How does Python garbage collection handle memory when reference counting drops to zero vs when circular references occur?',
+        interviewAnswer: 'Reference counting is Python primary deallocation mechanism: the instant an object reference count drops to 0, its memory is freed immediately. However, circular references prevent reference counts from ever reaching 0. To fix this, Python runs a secondary Generational Cyclic Garbage Collector (Generations 0, 1, 2) that detects isolated cycles of unreachable objects using pointer traversal and cleans them up.',
+        replLink: 'https://onecompiler.com/python'
       };
     }
-    if (titleLower.includes('generator') || titleLower.includes('iterator')) {
+
+    // Q5: Generators & Iterators
+    if (titleLower.includes('generator') || titleLower.includes('iterator') || qId === 5) {
       return {
-        task: 'Write an infinite Fibonacci generator function using `yield`. In a loop, extract the first 10 Fibonacci numbers using `next()` or `itertools.islice`.',
-        followUp: 'What built-in exception is raised when an iterator exhausts all its items in a for loop? (Answer: StopIteration).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Yield & Next Protocols'
-      };
-    }
-    if (titleLower.includes('__init__') || titleLower.includes('init')) {
-      return {
-        task: 'Create a class `DatabaseConnection` that implements the Singleton pattern using `__new__` so only one instance is ever created, and `__init__` sets the host.',
-        followUp: 'What is the exact distinction between `__new__` and `__init__` in Python object creation? Which one actually returns the instance?',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'OOP Dunder Methods'
-      };
-    }
-    if (titleLower.includes('mutable') || titleLower.includes('inbuilt data types')) {
-      return {
-        task: 'Write a function `def append_item(val, items=[]): items.append(val); return items`. Call it 3 times without passing the second argument. Notice the bug! Fix it using `items=None`.',
-        followUp: 'Why does Python evaluate default arguments at function definition time rather than at execution time?',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Mutable Default Trap'
-      };
-    }
-    if (titleLower.includes('args') && titleLower.includes('kwargs')) {
-      return {
-        task: 'Write a function `debug_log(*args, prefix="[LOG]", **kwargs)` that prints the positional arguments and kwargs formatted nicely. Call it forwarding arguments from another wrapper.',
-        followUp: 'How do you force a parameter to be keyword-only in Python 3? (Answer: Using a bare `*` in the signature, e.g., `def fn(a, b, *, timeout=10):`).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Signatures & Unpacking'
-      };
-    }
-    if (titleLower.includes('pickling') || titleLower.includes('pickle')) {
-      return {
-        task: 'Create a custom Python class instance, serialize it to bytes with `pickle.dumps()`, and reconstruct it with `pickle.loads()`. Print the recovered object.',
-        followUp: 'Why is `pickle` considered dangerous for loading untrusted API request payloads? What format should you use instead? (Answer: Arbitrary code execution via `__reduce__`; use JSON/protobuf).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Serialization Security'
-      };
-    }
-    if (titleLower.includes('exception')) {
-      return {
-        task: 'Write a division function with `try`, `except ZeroDivisionError`, `else` (runs only when no exception occurs), and `finally` (always runs for cleanup).',
-        followUp: 'When does the `else` block execute in Python exception handling, and why is it cleaner than putting code inside the `try` block?',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Exception Handling'
-      };
-    }
-    if (titleLower.includes('gil') || titleLower.includes('multiprocessing') || titleLower.includes('multithreading')) {
-      return {
-        task: 'Explain why a CPU-heavy loop running on 4 Python threads will NOT run 4x faster on a 4-core machine, but 4 threads downloading web pages (I/O bound) will show huge speedups.',
-        followUp: 'How do you achieve true parallel CPU execution across multiple cores in Python? (Answer: Use `multiprocessing` or `concurrent.futures.ProcessPoolExecutor`).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Concurrency & The GIL'
-      };
-    }
-    if (titleLower.includes('diamond') || titleLower.includes('multiple inheritance')) {
-      return {
-        task: 'Create classes `A`, `B(A)`, `C(A)`, and `D(B, C)`. Add a method `ping()` in each. Instantiate `D` and call `d.ping()`. Print `D.__mro__` to inspect the resolution order.',
-        followUp: 'What algorithm does Python 3 use to resolve Method Resolution Order (MRO)? (Answer: C3 Linearization).',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'MRO & OOP Inheritance'
-      };
-    }
-    if (titleLower.includes('shallow') || titleLower.includes('deep copy')) {
-      return {
-        task: 'Create a nested list `original = [[1, 2], [3, 4]]`. Make a shallow copy with `copy.copy(original)` and deep copy with `copy.deepcopy(original)`. Modify `original[0][0] = 99`. Observe what changed in each.',
-        followUp: 'What is the performance difference between shallow copy and deep copy on a complex graph of objects?',
-        replLink: 'https://onecompiler.com/python',
-        practiceType: 'Object Copying'
+        title: 'Building an Iterator Protocol vs Generator Function',
+        steps: [
+          'Implement a custom Iterator class with `__iter__()` and `__next__()` that raises `StopIteration`.',
+          'Implement the exact same logic using a Generator function with `yield`.',
+          'Compare the number of lines of code and explain state preservation across `yield` statements.'
+        ],
+        codeSnippet: `# 1. Class-based Iterator Protocol
+class CountUpTo:
+    def __init__(self, limit):
+        self.limit = limit
+        self.curr = 1
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.curr > self.limit:
+            raise StopIteration
+        val = self.curr
+        self.curr += 1
+        return val
+
+# 2. Generator Function (cleaner equivalent)
+def count_up_to_gen(limit):
+    curr = 1
+    while curr <= limit:
+        yield curr
+        curr += 1
+
+print("Iterator Class:", list(CountUpTo(3)))
+print("Generator Yield:", list(count_up_to_gen(3)))`,
+        expectedOutput: `Iterator Class: [1, 2, 3]
+Generator Yield: [1, 2, 3]`,
+        interviewQuestion: 'What happens under the hood when a function contains the yield keyword?',
+        interviewAnswer: 'When a function contains "yield", Python compiles it into a generator factory function rather than a standard function. Calling it does not execute the code; instead, it returns a generator iterator object. When next() is invoked on it, execution runs until the "yield" statement, pauses its stack frame and local variables in memory, and returns the yielded value.',
+        replLink: 'https://onecompiler.com/python'
       };
     }
   }
 
-  // Django Track Challenges
+  // --- DJANGO TRACK CHALLENGES ---
   if (trackId === 'django') {
-    if (titleLower.includes('install') || titleLower.includes('version')) {
+    // Q1: Install & Version
+    if (titleLower.includes('install') || qId === 1) {
       return {
-        task: 'In your terminal, create an isolated virtual environment: `python3 -m venv venv && source venv/bin/activate`. Install Django: `pip install django`. Check version with `python -m django --version`.',
-        followUp: 'Why is it critical to use `python -m django --version` instead of just running `django-admin`? (Answer: Ensures you are using the specific Python environment interpreter).',
-        replLink: 'https://docs.djangoproject.com/en/stable/intro/install/',
-        practiceType: 'Virtualenv & CLI Setup'
+        title: 'Virtual Environment Isolation & CLI Diagnostics',
+        steps: [
+          'In your terminal, verify the Python interpreter path: `which python3` or `where python`.',
+          'Create an isolated environment: `python3 -m venv venv && source venv/bin/activate`.',
+          'Install Django: `pip install django`.',
+          'Check version using both CLI flags and Python runtime: `python -m django --version` vs `django.get_version()`.'
+        ],
+        codeSnippet: `# Python Runtime Version Check
+import django
+
+print("Django Version:", django.get_version())
+print("Django Path:", django.__file__)`,
+        expectedOutput: `Django Version: 5.x.x (or current installed)
+Django Path: .../site-packages/django/__init__.py`,
+        interviewQuestion: 'Why should you always run "python -m django <command>" rather than standalone "django-admin"?',
+        interviewAnswer: 'Running "python -m django" guarantees that the command executes using the exact Python interpreter and virtual environment currently activated in your shell. The standalone "django-admin" executable might point to a global system-level Python installation on your PATH with mismatched library versions.',
+        replLink: 'https://docs.djangoproject.com/en/stable/intro/install/'
       };
     }
-    if (titleLower.includes('startproject') || titleLower.includes('project and app')) {
+
+    // Q2: Startproject vs Startapp
+    if (titleLower.includes('project and app') || titleLower.includes('startproject') || qId === 2) {
       return {
-        task: 'Explain the folder structure created by `django-admin startproject config .` vs `python manage.py startapp core`. Identify where settings, urls, and models live.',
-        followUp: 'Can a single Django app be reused across multiple Django projects? What makes an app truly decoupled?',
-        replLink: 'https://docs.djangoproject.com/en/stable/intro/tutorial01/',
-        practiceType: 'Architecture & Modularity'
+        title: 'Project vs App Container Architecture',
+        steps: [
+          'Run `django-admin startproject config .` to initialize the project container.',
+          'Run `python manage.py startapp accounts` to create a domain app.',
+          'Identify what files belong to the project container (`settings.py`, `wsgi.py`, `asgi.py`) vs the app (`models.py`, `views.py`, `apps.py`).',
+          'Register the app inside `INSTALLED_APPS` in `settings.py`.'
+        ],
+        codeSnippet: `# settings.py (Registering your modular app)
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    
+    # Custom Apps
+    'accounts.apps.AccountsConfig',
+]`,
+        expectedOutput: `App 'accounts' successfully loaded by Django app registry.`,
+        interviewQuestion: 'What is the architectural difference between a Django project and a Django app?',
+        interviewAnswer: 'A Django project is the overall web application container configuration (database settings, middleware pipeline, root URLconf, deployment WSGI entry point). A Django app is a self-contained, modular Python package that handles a specific business domain (e.g. users, billing, blog). A project can contain multiple apps, and an app can be reused across multiple projects.',
+        replLink: 'https://docs.djangoproject.com/en/stable/intro/tutorial01/'
       };
     }
-    if (titleLower.includes('migrations') || titleLower.includes('migration')) {
+
+    // Q3: Runserver
+    if (titleLower.includes('runserver') || qId === 3) {
       return {
-        task: 'Add a new field `is_verified = models.BooleanField(default=False)` to a model. Run `makemigrations`. Inspect the generated migration file and explain how `sqlmigrate app 0002` displays raw SQL.',
-        followUp: 'How does Django track which migrations have been applied? (Answer: The `django_migrations` table in your database schema).',
-        replLink: 'https://docs.djangoproject.com/en/stable/topics/migrations/',
-        practiceType: 'Database Schema Evolution'
-      };
-    }
-    if (titleLower.includes('select_related') || titleLower.includes('prefetch_related')) {
-      return {
-        task: 'Write the QuerySet for an `Order` model that has a ForeignKey to `User` and a ManyToMany to `Product`: `Order.objects.select_related("user").prefetch_related("products").all()`.',
-        followUp: 'What happens if you use `select_related` on a ManyToManyField? (Answer: Django raises an error because a single SQL JOIN would create massive duplicate row explosion).',
-        replLink: 'https://docs.djangoproject.com/en/stable/ref/models/querysets/#select-related',
-        practiceType: 'QuerySet Optimization (N+1)'
-      };
-    }
-    if (titleLower.includes('filter') || titleLower.includes('get') || titleLower.includes('all')) {
-      return {
-        task: 'Write a safe lookup: Compare `User.objects.get(id=999)` (raises `DoesNotExist`) with `User.objects.filter(id=999).first()` (returns `None`).',
-        followUp: 'What exception is raised by `get()` if the database finds two matching records? (Answer: `MultipleObjectsReturned`).',
-        replLink: 'https://docs.djangoproject.com/en/stable/topics/db/queries/',
-        practiceType: 'Safe Querying & Exceptions'
-      };
-    }
-    if (titleLower.includes('csrf')) {
-      return {
-        task: 'Explain the CSRF token flow: How the cookie is set, why `<form>` must contain `{% csrf_token %}`, and how JavaScript SPAs send `X-CSRFToken` in request headers.',
-        followUp: 'Why are GET requests exempt from CSRF protection while POST, PUT, DELETE require validation? (Answer: Safe methods must not modify server state).',
-        replLink: 'https://docs.djangoproject.com/en/stable/ref/csrf/',
-        practiceType: 'Security & Web Tokens'
-      };
-    }
-    if (titleLower.includes('q object') || titleLower.includes('q objects')) {
-      return {
-        task: 'Write a QuerySet that finds products where: `(price < 100 OR is_discounted=True) AND in_stock=True` using `Q` objects: `Product.objects.filter((Q(price__lt=100) | Q(is_discounted=True)) & Q(in_stock=True))`.',
-        followUp: 'How do you perform a NOT condition with Q objects? (Answer: Use the tilde operator `~Q(is_active=False)`).',
-        replLink: 'https://docs.djangoproject.com/en/stable/topics/db/queries/#complex-lookups-with-q-objects',
-        practiceType: 'Complex SQL Filter Logic'
-      };
-    }
-    if (titleLower.includes('middleware')) {
-      return {
-        task: 'Write a custom Django middleware class `RequestTimingMiddleware` that computes how many milliseconds each HTTP request took and adds an `X-Response-Time` header to the response.',
-        followUp: 'In what order are middlewares executed during the request phase vs the response phase? (Answer: Top-to-bottom on incoming requests, bottom-to-top on outgoing responses).',
-        replLink: 'https://docs.djangoproject.com/en/stable/topics/http/middleware/',
-        practiceType: 'Middleware Pipeline'
-      };
-    }
-    if (titleLower.includes('caching') || titleLower.includes('cache')) {
-      return {
-        task: 'Write code using the low-level cache API: `from django.core.cache import cache`. Check if a key exists with `cache.get("top_users")`, compute it if missing, and save it with `cache.set(key, data, timeout=300)`.',
-        followUp: 'What is a "cache stampede" and how does setting staggered timeouts or using locks prevent it when cached data expires?',
-        replLink: 'https://docs.djangoproject.com/en/stable/topics/cache/',
-        practiceType: 'Caching Strategies'
+        title: 'Development Server vs Production WSGI Application',
+        steps: [
+          'Run development server on custom port: `python manage.py runserver 0.0.0.0:8080`.',
+          'Explain why `runserver` must NEVER be used in production.',
+          'Explain the role of Gunicorn/uWSGI and Nginx in a production backend architecture.'
+        ],
+        codeSnippet: `# Command to run dev server on specific port
+python manage.py runserver 8000
+
+# Production WSGI Invocation (via Gunicorn)
+# gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4`,
+        expectedOutput: `Watching for file changes with StatReloader
+Performing system checks...
+Django version 5.x.x, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CONTROL-C.`,
+        interviewQuestion: 'Why is Django "runserver" unsuitable for production environments?',
+        interviewAnswer: 'runserver is a single-process development server built strictly for local testing. It lacks security hardening, cannot handle concurrency under heavy loads, lacks process monitoring/restarting, and does not serve static assets efficiently. In production, Django WSGI/ASGI applications must run behind production servers like Gunicorn or Daphne, reverse-proxied by Nginx.',
+        replLink: 'https://docs.djangoproject.com/en/stable/ref/django-admin/#runserver'
       };
     }
   }
 
-  // Fallback engaging challenge
+  // --- GENERIC STRUCTURED FALLBACK FOR OTHER QUESTIONS ---
   return {
-    task: `Open your local terminal or Python environment. Write a self-contained code snippet demonstrating ${question.title}. Test edge cases with invalid or empty input.`,
-    followUp: `If an interviewer asks you: "How would you optimize this under high traffic or large datasets?", what would your immediate technical response be?`,
-    replLink: trackId === 'python' ? 'https://onecompiler.com/python' : 'https://docs.djangoproject.com/en/stable/',
-    practiceType: 'Core Practical Exercise'
+    title: `Practical Verification: ${question.title}`,
+    steps: [
+      `Review the core concept for "${question.title}".`,
+      `Open your terminal or interactive Python/Django environment.`,
+      `Write a runnable snippet testing edge cases and verifying how the runtime behaves.`,
+      `Explain the trade-offs (CPU, memory, database query count) out loud.`
+    ],
+    codeSnippet: question.tip ? `# Syntax & Test Snippet\n${question.tip}` : `# Verification snippet for: ${question.title}\nprint("Testing ${question.title}")`,
+    expectedOutput: `Verified behavior matching Django/Python documentation specifications.`,
+    interviewQuestion: `How would you explain the trade-offs of ${question.title} if an interviewer asks you to scale this system?`,
+    interviewAnswer: `Break down: 1) What problem it solves, 2) The underlying mechanism (runtime memory or SQL execution), 3) The potential failure mode under high load, and 4) How to optimize or cache it in production.`,
+    replLink: trackId === 'python' ? 'https://onecompiler.com/python' : 'https://docs.djangoproject.com/en/stable/'
   };
 }
-
