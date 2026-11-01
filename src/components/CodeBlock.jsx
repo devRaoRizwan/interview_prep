@@ -82,9 +82,9 @@ export default function CodeBlock({ code, language = 'bash', label = 'COMMAND / 
   const isCommand = code.includes('pip') || code.includes('python') || code.includes('django-admin') || code.includes('manage.py');
 
   return (
-    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#0d1117] shadow-lg text-xs my-2 transition-all">
+    <div className="rounded-xl overflow-hidden border border-[#2c3343] bg-[#1a1e27] shadow-md text-xs my-2 transition-all">
       {/* Terminal Title Bar */}
-      <div className="px-3.5 py-2 bg-[#161b22] border-b border-zinc-800 flex items-center justify-between gap-2 select-none">
+      <div className="px-3.5 py-2 bg-[#202531] border-b border-[#2c3343] flex items-center justify-between gap-2 select-none">
         <div className="flex items-center gap-2">
           {/* macOS window control dots */}
           <div className="flex items-center gap-1.5">

@@ -122,7 +122,7 @@ export default function CircularTimer({
             ) : (
               <>
                 <span 
-                  className="font-mono font-extrabold tracking-tight text-zinc-950 leading-none"
+                  className="font-mono font-extrabold tracking-tight text-[#1a1e27] leading-none"
                   style={{ fontSize: size > 80 ? '14px' : '12px' }}
                 >
                   {formattedDigits}

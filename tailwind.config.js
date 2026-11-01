@@ -18,11 +18,11 @@ export default {
         sidebar: '#ffffff',
         line: '#e4e4e6',
         'line-strong': '#d4d4d8',
-        ink: '#0a0a0a',
+        ink: '#1a1e27',
         muted: '#565656',
         brand: {
-          DEFAULT: '#0a0a0a',
-          hover: '#000000',
+          DEFAULT: '#1e222b',
+          hover: '#292f3b',
           pale: '#f7f7f9',
         },
         signal: {

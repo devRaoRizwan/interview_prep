@@ -51,7 +51,7 @@ function FormattedSummary({ text }) {
           return (
             <code 
               key={i} 
-              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded bg-zinc-900 text-amber-300 font-semibold border border-zinc-700/80 shadow-xs"
+              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded bg-[#202532] text-amber-300 font-semibold border border-[#303748] shadow-xs"
             >
               {displayToken}
             </code>
@@ -574,7 +574,7 @@ export default function App() {
   const isScriptTimerDone = scriptTimerSeconds === 0 || !strictLock;
 
   return (
-    <div className="min-h-screen w-full bg-[#fafafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white antialiased">
+    <div className="min-h-screen w-full bg-[#fafafc] text-zinc-800 flex flex-col font-sans selection:bg-[#252b38] selection:text-white antialiased">
       
       {/* 1. TOP FULL-WIDTH HEADER BAR */}
       <header className="w-full border-b border-zinc-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-xs">
@@ -583,10 +583,10 @@ export default function App() {
           {/* Left: Brand & Mini 20m Circular Clock Status Widget */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-lg bg-zinc-950 text-white font-mono font-bold text-xs flex items-center justify-center shadow-xs">
+              <span className="w-7 h-7 rounded-lg bg-[#1e222b] text-zinc-100 border border-[#2d3342] font-mono font-bold text-xs flex items-center justify-center shadow-xs">
                 BD
               </span>
-              <span className="font-heading font-extrabold text-sm sm:text-base tracking-tight text-zinc-900">
+              <span className="font-heading font-extrabold text-sm sm:text-base tracking-tight text-[#1a1e27]">
                 Backend Dev
               </span>
             </div>
@@ -611,7 +611,7 @@ export default function App() {
                 type="button"
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
                 title={isTimerRunning ? 'Pause 20m timer' : 'Resume 20m timer'}
-                className="p-0.5 text-zinc-500 hover:text-zinc-950 transition-colors"
+                className="p-0.5 text-zinc-500 hover:text-[#1a1e27] transition-colors"
               >
                 {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-current" />}
               </button>
@@ -641,7 +641,7 @@ export default function App() {
                   onClick={() => handleSwitchTrack(t.id)}
                   className={`px-3.5 py-1 rounded-lg text-xs font-heading font-bold transition-all flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-white text-zinc-950 shadow-xs'
+                      ? 'bg-white text-[#1a1e27] shadow-xs'
                       : 'text-zinc-500 hover:text-zinc-800'
                   }`}
                 >
@@ -742,7 +742,7 @@ export default function App() {
                   }}
                   className={`h-7 px-3 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-zinc-950 text-white shadow-xs'
+                      ? 'bg-[#1e222b] text-white border border-[#2d3342] shadow-xs'
                       : isDone
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : !isUnlocked
@@ -784,7 +784,7 @@ export default function App() {
             {/* Question Heading Card */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-2">
               <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-500">
-                <span className="px-2 py-0.5 rounded bg-zinc-950 text-white font-bold text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-[#1e222b] text-zinc-100 border border-[#2d3342] font-bold text-[11px]">
                   {currentTrack.fullName.toUpperCase()}
                 </span>
                 <span className="font-bold text-zinc-800">QUESTION #{currentQuestion.id}</span>
@@ -795,14 +795,14 @@ export default function App() {
                 </span>
               </div>
 
-              <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-zinc-950 tracking-tight leading-snug m-0">
+              <h1 className="font-heading font-extrabold text-xl sm:text-2xl text-[#1a1e27] tracking-tight leading-snug m-0">
                 {currentQuestion.title}
               </h1>
             </div>
 
             {/* Video Player Card (Responsive 16:9 full width of left column) */}
             <div className="rounded-2xl overflow-hidden border border-zinc-200/80 bg-white shadow-xs p-3 sm:p-4 space-y-4">
-              <div className="rounded-xl overflow-hidden bg-black shadow-xs">
+              <div className="rounded-xl overflow-hidden bg-[#161a22] shadow-xs">
                 <YouTubePlayer
                   key={`${activeTrack}-${currentQuestion.id}`}
                   currentQuestion={currentQuestion}
@@ -825,7 +825,7 @@ export default function App() {
                       className={`flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm transition-all duration-150 flex items-center justify-center gap-2.5 shadow-xs ${
                         isCurrentCompleted
                           ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          : 'bg-zinc-950 hover:bg-black text-white'
+                          : 'bg-[#1e222b] hover:bg-[#282e3b] text-zinc-100 border border-[#2d3342]'
                       }`}
                     >
                       <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
@@ -938,7 +938,7 @@ export default function App() {
                       }}
                       className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
                         isCurrent
-                          ? 'border-zinc-950 bg-zinc-950 text-white shadow-xs'
+                          ? 'border-[#333a4a] bg-[#1e232e] text-zinc-100 shadow-sm'
                           : isDone
                           ? 'border-emerald-200 bg-emerald-50/60 text-zinc-900 hover:bg-emerald-50'
                           : !isUnlocked
@@ -1007,7 +1007,7 @@ export default function App() {
                     20-Minute Focus Clock
                   </span>
                 </div>
-                <h3 className="font-heading font-extrabold text-base sm:text-lg text-zinc-950 m-0">
+                <h3 className="font-heading font-extrabold text-base sm:text-lg text-[#1a1e27] m-0">
                   Concept Mastery & Spoken Rehearsal
                 </h3>
                 <p className="text-xs text-zinc-500 m-0 font-sans leading-relaxed">
@@ -1051,8 +1051,8 @@ export default function App() {
                       key={tab.id}
                       className={`flex items-center rounded-lg transition-all ${
                         isSelected
-                          ? 'bg-white shadow-xs text-zinc-950 font-bold'
-                          : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/60'
+                          ? 'bg-white shadow-xs text-[#1a1e27] font-bold'
+                          : 'text-zinc-500 hover:text-[#1a1e27] hover:bg-zinc-100/60'
                       }`}
                     >
                       {/* Clickable Tab Checkbox Button */}
@@ -1137,7 +1137,7 @@ export default function App() {
                           <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-600 block">
                             STEP 3: PRACTICAL VERIFICATION DRILL
                           </span>
-                          <h3 className="font-heading font-extrabold text-base text-zinc-950 mt-0.5">
+                          <h3 className="font-heading font-extrabold text-base text-[#1a1e27] mt-0.5">
                             {challenge.title}
                           </h3>
                         </div>
@@ -1146,7 +1146,7 @@ export default function App() {
                           href={challenge.replLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-colors shadow-xs"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1e222b] hover:bg-[#282e3b] text-zinc-100 border border-[#2d3342] text-xs font-mono font-bold transition-colors shadow-xs"
                         >
                           <Terminal className="w-3.5 h-3.5 text-amber-400" />
                           <span>Launch Online REPL ↗</span>
@@ -1182,7 +1182,7 @@ export default function App() {
                             <button
                               type="button"
                               onClick={() => handleCopySnippet(challenge.codeSnippet)}
-                              className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 hover:text-zinc-950 transition-colors"
+                              className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 hover:text-[#1a1e27] transition-colors"
                             >
                               {snippetCopied ? (
                                 <>
@@ -1198,7 +1198,7 @@ export default function App() {
                             </button>
                           </div>
 
-                          <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#0d1117] p-3.5 font-mono text-xs sm:text-[13px] text-emerald-300 overflow-x-auto shadow-xs">
+                          <div className="rounded-xl overflow-hidden border border-[#2c3343] bg-[#1a1e27] p-3.5 font-mono text-xs sm:text-[13px] text-emerald-300 overflow-x-auto shadow-xs">
                             <pre className="m-0 leading-relaxed whitespace-pre font-mono">
                               {challenge.codeSnippet}
                             </pre>
@@ -1312,7 +1312,7 @@ export default function App() {
                           </span>
                         </div>
 
-                        <blockquote className="m-0 text-sm sm:text-[15px] font-heading font-bold text-zinc-950 leading-relaxed italic border-l-3 border-purple-600 pl-3.5">
+                        <blockquote className="m-0 text-sm sm:text-[15px] font-heading font-bold text-[#1a1e27] leading-relaxed italic border-l-3 border-purple-600 pl-3.5">
                           "{scriptData.prompt}"
                         </blockquote>
 
@@ -1346,7 +1346,7 @@ export default function App() {
                           onBlur={handleSaveNote}
                           placeholder="Draft your 60-second explanation here. Follow the 3-point blueprint: 1) Core definition, 2) Mechanism & edge cases, 3) Production guidelines..."
                           rows={6}
-                          className="w-full text-xs sm:text-sm font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-zinc-900 focus:outline-none focus:bg-white focus:border-zinc-950 transition-colors placeholder:text-zinc-400 resize-y leading-relaxed"
+                          className="w-full text-xs sm:text-sm font-sans bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 text-zinc-900 focus:outline-none focus:bg-white focus:border-[#2d3342] transition-colors placeholder:text-zinc-400 resize-y leading-relaxed"
                         />
 
                         <div className="flex items-center justify-between">
@@ -1401,7 +1401,7 @@ export default function App() {
                               <button
                                 type="button"
                                 onClick={() => setShowModelSolution(!showModelSolution)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-mono font-bold transition-all shadow-xs"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1e222b] hover:bg-[#282e3b] text-zinc-100 border border-[#2d3342] text-xs font-mono font-bold transition-all shadow-xs"
                               >
                                 {showModelSolution ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                 <span>{showModelSolution ? 'Hide Model Answer' : 'Show Model Senior Answer'}</span>
@@ -1486,7 +1486,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => handleMarkTabDoneAndNext(activeTab)}
-                      className="px-3 py-1.5 rounded-lg font-semibold text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 flex items-center gap-1 transition-colors"
+                      className="px-3 py-1.5 rounded-lg font-semibold text-zinc-700 hover:text-[#1a1e27] hover:bg-zinc-100 flex items-center gap-1 transition-colors"
                     >
                       <span>Next Step</span>
                       <ArrowRight className="w-3.5 h-3.5" />

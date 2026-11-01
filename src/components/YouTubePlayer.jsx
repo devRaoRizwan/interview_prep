@@ -209,9 +209,9 @@ export default function YouTubePlayer({
   const segmentPercent = Math.min(100, (currentProgressSeconds / segmentDuration) * 100);
 
   return (
-    <div className="w-full rounded-xl overflow-hidden border border-line bg-black shadow-subtle">
+    <div className="w-full rounded-xl overflow-hidden border border-zinc-200/90 bg-[#161a22] shadow-xs">
       {/* 16:9 Video Container */}
-      <div className="relative w-full aspect-video bg-black">
+      <div className="relative w-full aspect-video bg-[#161a22]">
         {!useIframeFallback ? (
           <div className="absolute inset-0 w-full h-full">
             <div id="yt-single-player" className="w-full h-full" />
