@@ -8,6 +8,7 @@ import {
   getQuestionScriptData, 
   getQuestionDocSpecs 
 } from './data/challenges';
+import db, { QUESTION_TIMER_SECONDS, SCRIPT_TIMER_SECONDS } from './services/db';
 import YouTubePlayer from './components/YouTubePlayer';
 import CircularTimer from './components/CircularTimer';
 import { Admonition, DocCodeBlock, DocTable } from './components/DocusaurusDoc';
@@ -84,139 +85,67 @@ function formatTimerDigits(totalSeconds) {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-const STORAGE_PREFIX = 'backend_dev_zen_v3_';
-const QUESTION_TIMER_SECONDS = 20 * 60; // 20 Minutes (1200s)
-const SCRIPT_TIMER_SECONDS = 5 * 60;    // 5 Minutes (300s)
-
 export default function App() {
   // Active track: 'django' or 'python'
-  const [activeTrack, setActiveTrack] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'track');
-      return saved && TRACKS_DATA[saved] ? saved : 'python';
-    } catch {
-      return 'python';
-    }
-  });
+  const [activeTrack, setActiveTrack] = useState(() => db.getActiveTrack());
 
   // Track Data
-  const currentTrack = TRACKS_DATA[activeTrack] || TRACKS_DATA.python;
+  const currentTrack = TRACKS_DATA[activeTrack] || TRACKS_DATA.django;
 
   // Active question ID per track
-  const [activeQuestionId, setActiveQuestionId] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'qid_' + activeTrack);
-      if (saved && currentTrack.questions.some((q) => q.id === Number(saved))) {
-        return Number(saved);
-      }
-    } catch {
-      // ignore
-    }
-    return 1;
-  });
+  const [activeQuestionId, setActiveQuestionId] = useState(() => db.getActiveQuestion(db.getActiveTrack()));
 
   // Completed questions map { [track_id_qid]: boolean }
-  const [completedMap, setCompletedMap] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'completed');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [completedMap, setCompletedMap] = useState(() => db.getCompletedMap());
 
   // Tab checklist items map { [track_id_qid_tabId]: boolean }
-  const [tabChecksMap, setTabChecksMap] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'tab_checks');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [tabChecksMap, setTabChecksMap] = useState(() => db.getTabChecksMap());
 
   // Notes map { [track_id_qid]: string }
-  const [notesMap, setNotesMap] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'notes');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [notesMap, setNotesMap] = useState(() => db.getNotesMap());
 
   // Strict lock mode
-  const [strictLock, setStrictLock] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_PREFIX + 'strict_lock');
-      return saved !== null ? saved === 'true' : true;
-    } catch {
-      return true;
-    }
-  });
-
-  // Active tab: 'concept' | 'code' | 'challenge' | 'notes'
-  const [activeTab, setActiveTab] = useState('concept');
-  const [loopMode, setLoopMode] = useState(false);
-  const [currentNote, setCurrentNote] = useState('');
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [showModelSolution, setShowModelSolution] = useState(false);
-  const [snippetCopied, setSnippetCopied] = useState(false);
+  const [strictLock, setStrictLock] = useState(() => db.getStrictLock());
 
   // Helper for question key
   const getQuestionKey = useCallback((trackId, qId) => `${trackId}_${qId}`, []);
 
-  // --- 20-MINUTE FOCUS TIMER STATE ---
-  const [timerSeconds, setTimerSeconds] = useState(QUESTION_TIMER_SECONDS);
-  const [isTimerRunning, setIsTimerRunning] = useState(true);
-  const getTimerKey = useCallback((trackId, qId) => `${STORAGE_PREFIX}timer_${trackId}_${qId}`, []);
+  // Current active question's timer balances (initialized directly from DB!)
+  const initialTimer = useMemo(() => {
+    const t = db.getActiveTrack();
+    const q = db.getActiveQuestion(t);
+    const isDone = !!db.getCompletedMap()[`${t}_${q}`];
+    return db.getQuestionTimer(t, q, isDone);
+  }, []);
 
-  // --- 5-MINUTE SCRIPT TIMER STATE (Gated model solution) ---
-  const [scriptTimerSeconds, setScriptTimerSeconds] = useState(SCRIPT_TIMER_SECONDS);
-  const [isScriptTimerRunning, setIsScriptTimerRunning] = useState(true);
-  const getScriptTimerKey = useCallback((trackId, qId) => `${STORAGE_PREFIX}script_timer_${trackId}_${qId}`, []);
+  const [timerSeconds, setTimerSeconds] = useState(initialTimer.secondsLeft);
+  const [isTimerRunning, setIsTimerRunning] = useState(initialTimer.isRunning);
+  const [scriptTimerSeconds, setScriptTimerSeconds] = useState(initialTimer.scriptSecondsLeft);
+  const [isScriptTimerRunning, setIsScriptTimerRunning] = useState(initialTimer.isRunning);
 
-  // Sync active question 20m timer from localStorage
+  // Active tab: 'concept' | 'code' | 'challenge' | 'notes'
+  const [activeTab, setActiveTab] = useState('concept');
+  const [loopMode, setLoopMode] = useState(false);
+  const [currentNote, setCurrentNote] = useState(() => notesMap[getQuestionKey(activeTrack, activeQuestionId)] || '');
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [showModelSolution, setShowModelSolution] = useState(false);
+  const [snippetCopied, setSnippetCopied] = useState(false);
+
+  // Sync note on question change
   useEffect(() => {
-    try {
-      const savedTimer = localStorage.getItem(getTimerKey(activeTrack, activeQuestionId));
-      if (savedTimer !== null) {
-        const parsed = parseInt(savedTimer, 10);
-        setTimerSeconds(isNaN(parsed) ? QUESTION_TIMER_SECONDS : Math.max(0, parsed));
-      } else {
-        if (completedMap[getQuestionKey(activeTrack, activeQuestionId)]) {
-          setTimerSeconds(0);
-        } else {
-          setTimerSeconds(QUESTION_TIMER_SECONDS);
-        }
-      }
-    } catch {
-      setTimerSeconds(QUESTION_TIMER_SECONDS);
-    }
-    setIsTimerRunning(true);
-    setShowAnswer(false);
-    setShowModelSolution(false);
-  }, [activeTrack, activeQuestionId, completedMap, getQuestionKey, getTimerKey]);
+    setCurrentNote(notesMap[getQuestionKey(activeTrack, activeQuestionId)] || '');
+  }, [activeTrack, activeQuestionId, notesMap, getQuestionKey]);
 
-  // Sync active question 5m script timer from localStorage
+  // Refs to allow stable intervals without restarting every second
+  const scriptTimerSecondsRef = React.useRef(scriptTimerSeconds);
   useEffect(() => {
-    try {
-      const savedScriptTimer = localStorage.getItem(getScriptTimerKey(activeTrack, activeQuestionId));
-      if (savedScriptTimer !== null) {
-        const parsed = parseInt(savedScriptTimer, 10);
-        setScriptTimerSeconds(isNaN(parsed) ? SCRIPT_TIMER_SECONDS : Math.max(0, parsed));
-      } else {
-        if (completedMap[getQuestionKey(activeTrack, activeQuestionId)]) {
-          setScriptTimerSeconds(0);
-        } else {
-          setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
-        }
-      }
-    } catch {
-      setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
-    }
-    setIsScriptTimerRunning(true);
-  }, [activeTrack, activeQuestionId, completedMap, getQuestionKey, getScriptTimerKey]);
+    scriptTimerSecondsRef.current = scriptTimerSeconds;
+  }, [scriptTimerSeconds]);
+
+  const timerSecondsRef = React.useRef(timerSeconds);
+  useEffect(() => {
+    timerSecondsRef.current = timerSeconds;
+  }, [timerSeconds]);
 
   // Run the 20-minute question countdown interval
   useEffect(() => {
@@ -225,50 +154,54 @@ export default function App() {
     const interval = setInterval(() => {
       setTimerSeconds((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          setIsTimerRunning(false);
+          db.saveQuestionTimer(activeTrack, activeQuestionId, {
+            secondsLeft: 0,
+            scriptSecondsLeft: scriptTimerSecondsRef.current,
+            isRunning: false,
+          });
           return 0;
         }
-        return prev - 1;
+        const next = prev - 1;
+        db.saveQuestionTimer(activeTrack, activeQuestionId, {
+          secondsLeft: next,
+          scriptSecondsLeft: scriptTimerSecondsRef.current,
+          isRunning: true,
+        });
+        return next;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isTimerRunning]);
+  }, [isTimerRunning, activeTrack, activeQuestionId]);
 
   // Run the 5-minute script countdown interval (only when in 'notes' tab and running)
   useEffect(() => {
-    if (activeTab !== 'notes' || !isScriptTimerRunning || scriptTimerSeconds <= 0) return;
+    if (activeTab !== 'notes' || !isScriptTimerRunning) return;
 
     const interval = setInterval(() => {
       setScriptTimerSeconds((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          setIsScriptTimerRunning(false);
+          db.saveQuestionTimer(activeTrack, activeQuestionId, {
+            secondsLeft: timerSecondsRef.current,
+            scriptSecondsLeft: 0,
+            isRunning: isTimerRunning,
+          });
           return 0;
         }
-        return prev - 1;
+        const next = prev - 1;
+        db.saveQuestionTimer(activeTrack, activeQuestionId, {
+          secondsLeft: timerSecondsRef.current,
+          scriptSecondsLeft: next,
+          isRunning: isTimerRunning,
+        });
+        return next;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTab, isScriptTimerRunning, scriptTimerSeconds]);
-
-  // Persist 20m timer in localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(getTimerKey(activeTrack, activeQuestionId), timerSeconds.toString());
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [timerSeconds, activeTrack, activeQuestionId, getTimerKey]);
-
-  // Persist 5m script timer in localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(getScriptTimerKey(activeTrack, activeQuestionId), scriptTimerSeconds.toString());
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [scriptTimerSeconds, activeTrack, activeQuestionId, getScriptTimerKey]);
+  }, [activeTab, isScriptTimerRunning, activeTrack, activeQuestionId, isTimerRunning]);
 
   // Sync tab title with active 20m timer
   useEffect(() => {
@@ -277,76 +210,123 @@ export default function App() {
     document.title = `${prefix} Q${activeQuestionId}: ${currentTrack.name} - Backend Dev`;
   }, [timerSeconds, isTimerRunning, activeQuestionId, currentTrack.name]);
 
-  // Persist common states
+  // Persist timer on window unload/refresh
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'track', activeTrack);
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [activeTrack]);
+    const handleUnload = () => {
+      db.saveQuestionTimer(activeTrack, activeQuestionId, {
+        secondsLeft: timerSeconds,
+        scriptSecondsLeft: scriptTimerSeconds,
+        isRunning: isTimerRunning,
+      });
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [activeTrack, activeQuestionId, timerSeconds, scriptTimerSeconds, isTimerRunning]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'completed', JSON.stringify(completedMap));
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [completedMap]);
+  // Atomic Question Selection: saves previous timer and loads new question timer
+  const handleSelectQuestion = useCallback((targetQid) => {
+    if (targetQid === activeQuestionId) return;
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'tab_checks', JSON.stringify(tabChecksMap));
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [tabChecksMap]);
+    // 1. Save current question timer to DB
+    db.saveQuestionTimer(activeTrack, activeQuestionId, {
+      secondsLeft: timerSeconds,
+      scriptSecondsLeft: scriptTimerSeconds,
+      isRunning: isTimerRunning,
+    });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'notes', JSON.stringify(notesMap));
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [notesMap]);
+    // 2. Persist new active question ID in DB
+    db.setActiveQuestion(activeTrack, targetQid);
+    setActiveQuestionId(targetQid);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'qid_' + activeTrack, activeQuestionId.toString());
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [activeQuestionId, activeTrack]);
+    // 3. Load target question timer from DB
+    const isTargetDone = !!completedMap[getQuestionKey(activeTrack, targetQid)];
+    const nextTimer = db.getQuestionTimer(activeTrack, targetQid, isTargetDone);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + 'strict_lock', strictLock.toString());
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [strictLock]);
+    setTimerSeconds(nextTimer.secondsLeft);
+    setScriptTimerSeconds(nextTimer.scriptSecondsLeft);
+    setIsTimerRunning(nextTimer.isRunning);
 
-  // Handle track switch
-  const handleSwitchTrack = (trackId) => {
+    // Reset modals/toggles
+    setShowAnswer(false);
+    setShowModelSolution(false);
+  }, [activeTrack, activeQuestionId, timerSeconds, scriptTimerSeconds, isTimerRunning, completedMap, getQuestionKey]);
+
+  // Atomic Track Switch: saves previous track timer and loads new track timer
+  const handleSwitchTrack = useCallback((trackId) => {
+    if (trackId === activeTrack) return;
+
+    // 1. Save current question timer to DB
+    db.saveQuestionTimer(activeTrack, activeQuestionId, {
+      secondsLeft: timerSeconds,
+      scriptSecondsLeft: scriptTimerSeconds,
+      isRunning: isTimerRunning,
+    });
+
+    // 2. Set new active track in DB
+    db.setActiveTrack(trackId);
     setActiveTrack(trackId);
-    try {
-      const savedQid = localStorage.getItem(STORAGE_PREFIX + 'qid_' + trackId);
-      const targetTrack = TRACKS_DATA[trackId];
-      if (savedQid && targetTrack.questions.some((q) => q.id === Number(savedQid))) {
-        setActiveQuestionId(Number(savedQid));
-      } else {
-        setActiveQuestionId(1);
-      }
-    } catch {
-      setActiveQuestionId(1);
-    }
-    setActiveTab('concept');
-  };
 
-  // Sync note
-  useEffect(() => {
-    setCurrentNote(notesMap[getQuestionKey(activeTrack, activeQuestionId)] || '');
-  }, [activeTrack, activeQuestionId, notesMap, getQuestionKey]);
+    // 3. Look up last active question for this track
+    const targetQid = db.getActiveQuestion(trackId);
+    setActiveQuestionId(targetQid);
+
+    // 4. Load target question timer from DB
+    const isTargetDone = !!completedMap[getQuestionKey(trackId, targetQid)];
+    const nextTimer = db.getQuestionTimer(trackId, targetQid, isTargetDone);
+
+    setTimerSeconds(nextTimer.secondsLeft);
+    setScriptTimerSeconds(nextTimer.scriptSecondsLeft);
+    setIsTimerRunning(nextTimer.isRunning);
+
+    setActiveTab('concept');
+    setShowAnswer(false);
+    setShowModelSolution(false);
+  }, [activeTrack, activeQuestionId, timerSeconds, scriptTimerSeconds, isTimerRunning, completedMap, getQuestionKey]);
+
+  // Timer Control Handlers
+  const handleToggleTimer = useCallback(() => {
+    setIsTimerRunning((prev) => {
+      const next = !prev;
+      db.saveQuestionTimer(activeTrack, activeQuestionId, {
+        secondsLeft: timerSeconds,
+        scriptSecondsLeft: scriptTimerSeconds,
+        isRunning: next,
+      });
+      return next;
+    });
+  }, [activeTrack, activeQuestionId, timerSeconds, scriptTimerSeconds]);
+
+  const handleResetTimer = useCallback(() => {
+    setTimerSeconds(QUESTION_TIMER_SECONDS);
+    setIsTimerRunning(true);
+    db.saveQuestionTimer(activeTrack, activeQuestionId, {
+      secondsLeft: QUESTION_TIMER_SECONDS,
+      scriptSecondsLeft: scriptTimerSeconds,
+      isRunning: true,
+    });
+  }, [activeTrack, activeQuestionId, scriptTimerSeconds]);
+
+  const handleToggleScriptTimer = useCallback(() => {
+    setIsScriptTimerRunning((prev) => {
+      const next = !prev;
+      db.saveQuestionTimer(activeTrack, activeQuestionId, {
+        secondsLeft: timerSeconds,
+        scriptSecondsLeft: scriptTimerSeconds,
+        isRunning: isTimerRunning,
+      });
+      return next;
+    });
+  }, [activeTrack, activeQuestionId, timerSeconds, scriptTimerSeconds, isTimerRunning]);
+
+  const handleResetScriptTimer = useCallback(() => {
+    setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
+    setIsScriptTimerRunning(true);
+    db.saveQuestionTimer(activeTrack, activeQuestionId, {
+      secondsLeft: timerSeconds,
+      scriptSecondsLeft: SCRIPT_TIMER_SECONDS,
+      isRunning: isTimerRunning,
+    });
+  }, [activeTrack, activeQuestionId, timerSeconds, isTimerRunning]);
 
   // Active Question Object
   const currentQuestion = useMemo(() => {
@@ -400,11 +380,10 @@ export default function App() {
   const handleToggleTabCheck = useCallback((tabId, e) => {
     if (e) e.stopPropagation();
     const key = `${getQuestionKey(activeTrack, currentQuestion.id)}_${tabId}`;
-    setTabChecksMap((prev) => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  }, [activeTrack, currentQuestion.id, getQuestionKey]);
+    const nextVal = !tabChecksMap[key];
+    db.setTabCheck(activeTrack, currentQuestion.id, tabId, nextVal);
+    setTabChecksMap(db.getTabChecksMap());
+  }, [activeTrack, currentQuestion.id, getQuestionKey, tabChecksMap]);
 
   // Compute how many steps are checked for the current question
   const checkedStepsCount = useMemo(() => {
@@ -436,45 +415,33 @@ export default function App() {
 
     const isNowDone = !isCurrentlyDone;
     
-    // When marking complete, also check all steps and mark timers as finished
+    // Save completion state to DB
+    db.setCompleted(activeTrack, id, isNowDone);
+    setCompletedMap(db.getCompletedMap());
+
     if (isNowDone) {
       setTimerSeconds(0);
       setScriptTimerSeconds(0);
-      try {
-        localStorage.setItem(getTimerKey(activeTrack, id), '0');
-        localStorage.setItem(getScriptTimerKey(activeTrack, id), '0');
-      } catch (e) {}
+      setIsTimerRunning(false);
 
-      setTabChecksMap((prev) => {
-        const next = { ...prev };
-        questionTabs.forEach((t) => {
-          next[`${key}_${t.id}`] = true;
-        });
-        return next;
-      });
+      // Check all 4 steps for this question in DB and state
+      db.setAllTabChecksForQuestion(activeTrack, id, ['concept', 'code', 'challenge', 'notes'], true);
+      setTabChecksMap(db.getTabChecksMap());
     }
-
-    setCompletedMap((prev) => ({
-      ...prev,
-      [key]: isNowDone
-    }));
 
     // If marked done, advance to next question
     if (isNowDone && id < currentTrack.questions.length) {
       setTimeout(() => {
-        setActiveQuestionId(id + 1);
+        handleSelectQuestion(id + 1);
         setActiveTab('concept');
       }, 300);
     }
-  }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, getTimerKey, getScriptTimerKey, questionTabs, strictLock, timerSeconds]);
+  }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, handleSelectQuestion, strictLock, timerSeconds]);
 
   // Action to mark current tab done and advance to next tab
   const handleMarkTabDoneAndNext = (currentTabId) => {
-    const key = `${getQuestionKey(activeTrack, currentQuestion.id)}_${currentTabId}`;
-    setTabChecksMap((prev) => ({
-      ...prev,
-      [key]: true
-    }));
+    db.setTabCheck(activeTrack, currentQuestion.id, currentTabId, true);
+    setTabChecksMap(db.getTabChecksMap());
 
     const currentIndex = questionTabs.findIndex((t) => t.id === currentTabId);
     if (currentIndex < questionTabs.length - 1) {
@@ -493,16 +460,12 @@ export default function App() {
   const handleSaveNote = () => {
     const key = getQuestionKey(activeTrack, activeQuestionId);
     if (currentNote !== (notesMap[key] || '')) {
-      setNotesMap((prev) => ({
-        ...prev,
-        [key]: currentNote
-      }));
+      db.setNote(activeTrack, activeQuestionId, currentNote);
+      setNotesMap(db.getNotesMap());
       // Auto-check the 'notes' tab if note was written
       if (currentNote.trim().length > 0) {
-        setTabChecksMap((prev) => ({
-          ...prev,
-          [`${key}_notes`]: true
-        }));
+        db.setTabCheck(activeTrack, activeQuestionId, 'notes', true);
+        setTabChecksMap(db.getTabChecksMap());
       }
     }
   };
@@ -510,26 +473,21 @@ export default function App() {
   // Reset progress for this track
   const handleResetTrack = () => {
     if (window.confirm(`Reset your ${currentTrack.name} progress?`)) {
-      setCompletedMap((prev) => {
-        const next = { ...prev };
-        currentTrack.questions.forEach((q) => {
-          delete next[getQuestionKey(activeTrack, q.id)];
+      currentTrack.questions.forEach((q) => {
+        db.setCompleted(activeTrack, q.id, false);
+        ['concept', 'code', 'challenge', 'notes'].forEach((tabId) => {
+          db.setTabCheck(activeTrack, q.id, tabId, false);
         });
-        return next;
-      });
-      setTabChecksMap((prev) => {
-        const next = { ...prev };
-        currentTrack.questions.forEach((q) => {
-          ['concept', 'code', 'challenge', 'notes'].forEach((tabId) => {
-            delete next[`${getQuestionKey(activeTrack, q.id)}_${tabId}`];
-          });
+        db.saveQuestionTimer(activeTrack, q.id, {
+          secondsLeft: QUESTION_TIMER_SECONDS,
+          scriptSecondsLeft: SCRIPT_TIMER_SECONDS,
+          isRunning: true,
         });
-        return next;
       });
-      setActiveQuestionId(1);
+      setCompletedMap(db.getCompletedMap());
+      setTabChecksMap(db.getTabChecksMap());
+      handleSelectQuestion(1);
       setActiveTab('concept');
-      setTimerSeconds(QUESTION_TIMER_SECONDS);
-      setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
     }
   };
 
@@ -563,7 +521,7 @@ export default function App() {
     const dayQuestions = currentTrack.questions.filter((q) => q.day === dayNum);
     const firstUnfinished = dayQuestions.find((q) => isQuestionUnlocked(q.id) && !completedMap[getQuestionKey(activeTrack, q.id)]);
     const target = firstUnfinished || dayQuestions[0];
-    setActiveQuestionId(target.id);
+    handleSelectQuestion(target.id);
     setActiveTab('concept');
   };
 
@@ -599,42 +557,12 @@ export default function App() {
               </span>
             </div>
 
-            {/* 20-MINUTE FOCUS CLOCK MINI STATUS WIDGET */}
+            {/* 20-MINUTE FOCUS SESSION STATUS INDICATOR PILL */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 shadow-xs">
-              <CircularTimer
-                secondsLeft={timerSeconds}
-                totalSeconds={QUESTION_TIMER_SECONDS}
-                isRunning={isTimerRunning}
-                size={22}
-                strokeWidth={3}
-                colorScheme="focus"
-                showControls={false}
-              />
-              
-              <span className={`font-mono text-xs font-bold ${timerSeconds === 0 ? 'text-emerald-700 font-extrabold' : 'text-zinc-900'}`}>
-                {timerSeconds === 0 ? '20m Reached' : formatTimerDigits(timerSeconds)}
+              <span className={`w-2 h-2 rounded-full ${timerSeconds === 0 ? 'bg-emerald-500' : isTimerRunning ? 'bg-cyan-500 animate-pulse' : 'bg-amber-400'}`} />
+              <span className={`font-mono text-xs font-bold ${timerSeconds === 0 ? 'text-emerald-700 font-extrabold' : 'text-zinc-800'}`}>
+                {timerSeconds === 0 ? '20m Focus Done ✓' : `${formatTimerDigits(timerSeconds)} left`}
               </span>
-
-              <button
-                type="button"
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
-                title={isTimerRunning ? 'Pause 20m timer' : 'Resume 20m timer'}
-                className="p-0.5 text-zinc-500 hover:text-[#1a1e27] transition-colors"
-              >
-                {isTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-current" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setTimerSeconds(QUESTION_TIMER_SECONDS);
-                  setIsTimerRunning(true);
-                }}
-                title="Reset 20m timer"
-                className="p-0.5 text-zinc-400 hover:text-zinc-800 transition-colors"
-              >
-                <RotateCcw className="w-2.5 h-2.5" />
-              </button>
             </div>
           </div>
 
@@ -672,7 +600,11 @@ export default function App() {
 
             <button
               type="button"
-              onClick={() => setStrictLock(!strictLock)}
+              onClick={() => {
+                const nextLock = !strictLock;
+                db.setStrictLock(nextLock);
+                setStrictLock(nextLock);
+              }}
               title={strictLock ? 'Progression Lock: ON (All 4 Steps & 20m Required)' : 'Progression Lock: OFF'}
               className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 transition-colors shadow-2xs"
             >
@@ -745,7 +677,7 @@ export default function App() {
                   type="button"
                   disabled={!isUnlocked}
                   onClick={() => {
-                    setActiveQuestionId(q.id);
+                    handleSelectQuestion(q.id);
                     setActiveTab('concept');
                   }}
                   className={`h-7 px-3 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
@@ -876,7 +808,7 @@ export default function App() {
                   {/* Quick Next Arrow */}
                   <button
                     type="button"
-                    onClick={() => hasNext && isNextUnlocked && setActiveQuestionId(currentQuestion.id + 1)}
+                    onClick={() => hasNext && isNextUnlocked && handleSelectQuestion(currentQuestion.id + 1)}
                     disabled={!hasNext || !isNextUnlocked}
                     title={hasNext && !isNextUnlocked ? `Locked: Complete all 4 steps and 20m timer (${formatTimerDigits(timerSeconds)} left)` : 'Next question'}
                     className="p-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-2xs"
@@ -941,7 +873,7 @@ export default function App() {
                       type="button"
                       disabled={!isUnlocked}
                       onClick={() => {
-                        setActiveQuestionId(q.id);
+                        handleSelectQuestion(q.id);
                         setActiveTab('concept');
                       }}
                       className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
@@ -1029,11 +961,8 @@ export default function App() {
                   secondsLeft={timerSeconds}
                   totalSeconds={QUESTION_TIMER_SECONDS}
                   isRunning={isTimerRunning}
-                  onToggleRunning={() => setIsTimerRunning(!isTimerRunning)}
-                  onReset={() => {
-                    setTimerSeconds(QUESTION_TIMER_SECONDS);
-                    setIsTimerRunning(true);
-                  }}
+                  onToggleRunning={handleToggleTimer}
+                  onReset={handleResetTimer}
                   size={96}
                   strokeWidth={6}
                   colorScheme="focus"
@@ -1336,11 +1265,8 @@ export default function App() {
                             secondsLeft={scriptTimerSeconds}
                             totalSeconds={SCRIPT_TIMER_SECONDS}
                             isRunning={isScriptTimerRunning && activeTab === 'notes'}
-                            onToggleRunning={() => setIsScriptTimerRunning(!isScriptTimerRunning)}
-                            onReset={() => {
-                              setScriptTimerSeconds(SCRIPT_TIMER_SECONDS);
-                              setIsScriptTimerRunning(true);
-                            }}
+                            onToggleRunning={handleToggleScriptTimer}
+                            onReset={handleResetScriptTimer}
                             size={84}
                             strokeWidth={5}
                             colorScheme="script"
@@ -1393,7 +1319,16 @@ export default function App() {
 
                         <textarea
                           value={currentNote}
-                          onChange={(e) => setCurrentNote(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCurrentNote(val);
+                            db.setNote(activeTrack, activeQuestionId, val);
+                            setNotesMap(db.getNotesMap());
+                            if (val.trim().length > 0) {
+                              db.setTabCheck(activeTrack, activeQuestionId, 'notes', true);
+                              setTabChecksMap(db.getTabChecksMap());
+                            }
+                          }}
                           onBlur={handleSaveNote}
                           placeholder="Draft your 60-second explanation here. Follow the 3-point blueprint: 1) Core definition, 2) Mechanism & edge cases, 3) Production guidelines..."
                           rows={6}
