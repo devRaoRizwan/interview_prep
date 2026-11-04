@@ -22,6 +22,7 @@ function getDefaultState() {
     tabChecks: {},     // { [track_qid_tabId]: boolean }
     notes: {},         // { [track_qid]: string }
     timers: {},        // { [track_qid]: { secondsLeft, scriptSecondsLeft, isRunning, lastTimestamp } }
+    unlockedQuestions: {}, // { [track_qid]: boolean } individually friction-unlocked questions
   };
 }
 
@@ -47,6 +48,7 @@ class StorageDB {
             tabChecks: parsed.tabChecks || {},
             notes: parsed.notes || {},
             timers: parsed.timers || {},
+            unlockedQuestions: parsed.unlockedQuestions || {},
           };
         }
       }
@@ -185,6 +187,21 @@ class StorageDB {
   setNote(trackId, qId, text) {
     const key = `${trackId}_${qId}`;
     this.memoryState.notes[key] = text;
+    this._persist();
+  }
+
+  // --- FRICTION-UNLOCKED QUESTIONS ---
+  getUnlockedMap() {
+    return { ...this.memoryState.unlockedQuestions };
+  }
+
+  setQuestionUnlocked(trackId, qId, isUnlocked = true) {
+    const key = `${trackId}_${qId}`;
+    if (isUnlocked) {
+      this.memoryState.unlockedQuestions[key] = true;
+    } else {
+      delete this.memoryState.unlockedQuestions[key];
+    }
     this._persist();
   }
 

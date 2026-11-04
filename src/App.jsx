@@ -37,7 +37,12 @@ import {
   Calendar,
   Layers,
   Award,
-  AlertCircle
+  AlertCircle,
+  ShieldAlert,
+  Brain,
+  PenTool,
+  HelpCircle,
+  X
 } from 'lucide-react';
 
 // Formatted summary with highlighted code tokens
@@ -107,6 +112,19 @@ export default function App() {
   // Strict lock mode
   const [strictLock, setStrictLock] = useState(() => db.getStrictLock());
 
+  // Friction-unlocked questions map { [track_qid]: boolean }
+  const [unlockedQuestionsMap, setUnlockedQuestionsMap] = useState(() => db.getUnlockedMap());
+
+  // Friction Gate Modal State: null | { type: 'question' | 'toggle_lock' | 'complete', targetQid?: number }
+  const [frictionGateModal, setFrictionGateModal] = useState(null);
+  const [frictionChecks, setFrictionChecks] = useState({
+    runtimeMechanism: false,
+    verbalRecall: false,
+    antiRushingCommitment: false,
+  });
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+
   // Helper for question key
   const getQuestionKey = useCallback((trackId, qId) => `${trackId}_${qId}`, []);
 
@@ -131,10 +149,36 @@ export default function App() {
   const [showModelSolution, setShowModelSolution] = useState(false);
   const [snippetCopied, setSnippetCopied] = useState(false);
 
+  // Word count of current spoken response
+  const currentNoteWords = useMemo(() => {
+    if (!currentNote || !currentNote.trim()) return 0;
+    return currentNote.trim().split(/\s+/).filter(Boolean).length;
+  }, [currentNote]);
+
+  // All 3 reflection checks satisfied
+  const allChecksChecked = Boolean(
+    frictionChecks.runtimeMechanism &&
+    frictionChecks.verbalRecall &&
+    frictionChecks.antiRushingCommitment
+  );
+
   // Sync note on question change
   useEffect(() => {
     setCurrentNote(notesMap[getQuestionKey(activeTrack, activeQuestionId)] || '');
   }, [activeTrack, activeQuestionId, notesMap, getQuestionKey]);
+
+  // Reset friction checks when modal opens or closes
+  useEffect(() => {
+    if (frictionGateModal) {
+      setFrictionChecks({
+        runtimeMechanism: false,
+        verbalRecall: false,
+        antiRushingCommitment: false,
+      });
+      setHoldProgress(0);
+      setIsHolding(false);
+    }
+  }, [frictionGateModal]);
 
   // Refs to allow stable intervals without restarting every second
   const scriptTimerSecondsRef = React.useRef(scriptTimerSeconds);
@@ -381,9 +425,20 @@ export default function App() {
     if (e) e.stopPropagation();
     const key = `${getQuestionKey(activeTrack, currentQuestion.id)}_${tabId}`;
     const nextVal = !tabChecksMap[key];
+
+    // Deliberate friction for My Script: prompt if checking off without drafting
+    if (tabId === 'notes' && nextVal && strictLock) {
+      if (currentNoteWords < 25) {
+        const confirmCheck = window.confirm(
+          `Your spoken response draft currently has ${currentNoteWords} words (recommended: at least 25 words to cement interview recall).\n\nDo you want to check it off anyway without writing out your thoughts?`
+        );
+        if (!confirmCheck) return;
+      }
+    }
+
     db.setTabCheck(activeTrack, currentQuestion.id, tabId, nextVal);
     setTabChecksMap(db.getTabChecksMap());
-  }, [activeTrack, currentQuestion.id, getQuestionKey, tabChecksMap]);
+  }, [activeTrack, currentNoteWords, currentQuestion.id, getQuestionKey, strictLock, tabChecksMap]);
 
   // Compute how many steps are checked for the current question
   const checkedStepsCount = useMemo(() => {
@@ -398,18 +453,19 @@ export default function App() {
     if (qId === 1) return true;
     const currentDone = !!completedMap[getQuestionKey(activeTrack, qId)];
     const prevDone = !!completedMap[getQuestionKey(activeTrack, qId - 1)];
-    return currentDone || prevDone;
-  }, [strictLock, completedMap, activeTrack, getQuestionKey]);
+    const isIndividuallyUnlocked = !!unlockedQuestionsMap[getQuestionKey(activeTrack, qId)];
+    return currentDone || prevDone || isIndividuallyUnlocked;
+  }, [strictLock, completedMap, unlockedQuestionsMap, activeTrack, getQuestionKey]);
 
   // Toggle overall question completion
-  const handleToggleComplete = useCallback((id) => {
+  const handleToggleComplete = useCallback((id, forceBypass = false) => {
     const key = getQuestionKey(activeTrack, id);
     const isCurrentlyDone = !!completedMap[key];
     const isTimerDone = timerSeconds === 0;
 
-    // Strict time enforcement: cannot mark complete before 20 minutes unless unlocking/undoing or strictLock is off
-    if (strictLock && !isTimerDone && !isCurrentlyDone) {
-      alert(`Full 20-minute focus session required on this question before marking it complete (${formatTimerDigits(timerSeconds)} remaining).`);
+    // Strict time enforcement: cannot mark complete before 20 minutes unless unlocking/undoing or strictLock is off or forceBypass
+    if (strictLock && !isTimerDone && !isCurrentlyDone && !forceBypass) {
+      setFrictionGateModal({ type: 'complete', targetQid: id });
       return;
     }
 
@@ -438,8 +494,64 @@ export default function App() {
     }
   }, [activeTrack, completedMap, currentTrack.questions.length, getQuestionKey, handleSelectQuestion, strictLock, timerSeconds]);
 
+  // Friction Gate Unlock Executor
+  const handleExecuteFrictionUnlock = useCallback(() => {
+    if (!frictionGateModal) return;
+    setIsHolding(false);
+
+    if (frictionGateModal.type === 'question') {
+      const targetQid = frictionGateModal.targetQid;
+      db.setQuestionUnlocked(activeTrack, targetQid, true);
+      setUnlockedQuestionsMap(db.getUnlockedMap());
+      handleSelectQuestion(targetQid);
+      setActiveTab('concept');
+      setFrictionGateModal(null);
+    } else if (frictionGateModal.type === 'toggle_lock') {
+      db.setStrictLock(false);
+      setStrictLock(false);
+      setFrictionGateModal(null);
+    } else if (frictionGateModal.type === 'complete') {
+      handleToggleComplete(currentQuestion.id, true /* forceBypass */);
+      setFrictionGateModal(null);
+    }
+  }, [frictionGateModal, activeTrack, handleSelectQuestion, handleToggleComplete, currentQuestion.id]);
+
+  const handleExecuteFrictionUnlockRef = React.useRef(handleExecuteFrictionUnlock);
+  useEffect(() => {
+    handleExecuteFrictionUnlockRef.current = handleExecuteFrictionUnlock;
+  }, [handleExecuteFrictionUnlock]);
+
+  // Hold-to-unlock interval (2.5 seconds hold)
+  useEffect(() => {
+    if (!isHolding) {
+      setHoldProgress(0);
+      return;
+    }
+    const startTime = Date.now();
+    const duration = 2500;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, Math.round((elapsed / duration) * 100));
+      setHoldProgress(pct);
+      if (pct >= 100) {
+        clearInterval(interval);
+        handleExecuteFrictionUnlockRef.current();
+      }
+    }, 40);
+    return () => clearInterval(interval);
+  }, [isHolding]);
+
   // Action to mark current tab done and advance to next tab
   const handleMarkTabDoneAndNext = (currentTabId) => {
+    if (currentTabId === 'notes' && strictLock) {
+      if (currentNoteWords < 25) {
+        const confirmCheck = window.confirm(
+          `Your spoken response draft currently has ${currentNoteWords} words (recommended: at least 25 words to cement interview recall).\n\nDo you want to mark it done anyway without writing out your thoughts?`
+        );
+        if (!confirmCheck) return;
+      }
+    }
+
     db.setTabCheck(activeTrack, currentQuestion.id, currentTabId, true);
     setTabChecksMap(db.getTabChecksMap());
 
@@ -462,8 +574,8 @@ export default function App() {
     if (currentNote !== (notesMap[key] || '')) {
       db.setNote(activeTrack, activeQuestionId, currentNote);
       setNotesMap(db.getNotesMap());
-      // Auto-check the 'notes' tab if note was written
-      if (currentNote.trim().length > 0) {
+      // Auto-check the 'notes' tab if note was written with at least 25 words
+      if (currentNoteWords >= 25) {
         db.setTabCheck(activeTrack, activeQuestionId, 'notes', true);
         setTabChecksMap(db.getTabChecksMap());
       }
@@ -478,6 +590,7 @@ export default function App() {
         ['concept', 'code', 'challenge', 'notes'].forEach((tabId) => {
           db.setTabCheck(activeTrack, q.id, tabId, false);
         });
+        db.setQuestionUnlocked(activeTrack, q.id, false);
         db.saveQuestionTimer(activeTrack, q.id, {
           secondsLeft: QUESTION_TIMER_SECONDS,
           scriptSecondsLeft: SCRIPT_TIMER_SECONDS,
@@ -486,6 +599,7 @@ export default function App() {
       });
       setCompletedMap(db.getCompletedMap());
       setTabChecksMap(db.getTabChecksMap());
+      setUnlockedQuestionsMap(db.getUnlockedMap());
       handleSelectQuestion(1);
       setActiveTab('concept');
     }
@@ -502,7 +616,7 @@ export default function App() {
   const isCurrentQuestionSatisfied = (areAllStepsChecked && isTimerDone) || isCurrentCompleted;
   const hasPrevious = currentQuestion.id > 1;
   const hasNext = currentQuestion.id < currentTrack.questions.length;
-  const isNextUnlocked = hasNext && isQuestionUnlocked(currentQuestion.id + 1) && (!strictLock || isCurrentQuestionSatisfied);
+  const isNextUnlocked = hasNext && (isQuestionUnlocked(currentQuestion.id + 1) && (!strictLock || isCurrentQuestionSatisfied || !!unlockedQuestionsMap[getQuestionKey(activeTrack, currentQuestion.id + 1)]));
 
   // Jump to first incomplete tab
   const handleJumpToIncompleteTab = () => {
@@ -521,8 +635,12 @@ export default function App() {
     const dayQuestions = currentTrack.questions.filter((q) => q.day === dayNum);
     const firstUnfinished = dayQuestions.find((q) => isQuestionUnlocked(q.id) && !completedMap[getQuestionKey(activeTrack, q.id)]);
     const target = firstUnfinished || dayQuestions[0];
-    handleSelectQuestion(target.id);
-    setActiveTab('concept');
+    if (isQuestionUnlocked(target.id)) {
+      handleSelectQuestion(target.id);
+      setActiveTab('concept');
+    } else {
+      setFrictionGateModal({ type: 'question', targetQid: target.id });
+    }
   };
 
   const handlePrevDay = () => {
@@ -601,14 +719,24 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                const nextLock = !strictLock;
-                db.setStrictLock(nextLock);
-                setStrictLock(nextLock);
+                if (strictLock) {
+                  setFrictionGateModal({ type: 'toggle_lock' });
+                } else {
+                  db.setStrictLock(true);
+                  setStrictLock(true);
+                }
               }}
-              title={strictLock ? 'Progression Lock: ON (All 4 Steps & 20m Required)' : 'Progression Lock: OFF'}
-              className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 transition-colors shadow-2xs"
+              title={strictLock ? 'Progression Lock: ON (Click to open friction checkpoint)' : 'Progression Lock: OFF (Click to re-enable strict focus)'}
+              className={`p-1.5 px-2 rounded-lg border transition-all shadow-2xs flex items-center gap-1.5 ${
+                strictLock
+                  ? 'border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              }`}
             >
               {strictLock ? <Lock className="w-4 h-4 text-zinc-900" /> : <Unlock className="w-4 h-4 text-emerald-600" />}
+              <span className="hidden sm:inline text-[11px] font-mono font-semibold">
+                {strictLock ? 'Strict Lock' : 'Unlocked'}
+              </span>
             </button>
 
             <button
@@ -675,10 +803,13 @@ export default function App() {
                 <button
                   key={q.id}
                   type="button"
-                  disabled={!isUnlocked}
                   onClick={() => {
-                    handleSelectQuestion(q.id);
-                    setActiveTab('concept');
+                    if (isUnlocked) {
+                      handleSelectQuestion(q.id);
+                      setActiveTab('concept');
+                    } else {
+                      setFrictionGateModal({ type: 'question', targetQid: q.id });
+                    }
                   }}
                   className={`h-7 px-3 rounded-full text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
                     isSelected
@@ -686,15 +817,15 @@ export default function App() {
                       : isDone
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : !isUnlocked
-                      ? 'text-zinc-300 cursor-not-allowed'
+                      ? 'bg-zinc-100/70 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/80 cursor-pointer border border-dashed border-zinc-200'
                       : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
                   }`}
-                  title={q.title}
+                  title={!isUnlocked ? `${q.title} (Locked - Click to review friction checkpoint)` : q.title}
                 >
                   {isDone ? (
                     <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
                   ) : !isUnlocked ? (
-                    <Lock className="w-2.5 h-2.5 opacity-40" />
+                    <Lock className="w-2.5 h-2.5 text-zinc-400" />
                   ) : null}
                   <span>Q{idx + 1}</span>
                   <span className="hidden lg:inline font-normal opacity-80">: {q.title.length > 22 ? q.title.slice(0, 22) + '...' : q.title}</span>
@@ -784,15 +915,13 @@ export default function App() {
                       </span>
                     </button>
                   ) : (
-                    /* Locked Button until both all steps AND 20m timer are completed */
+                    /* Locked Button until both all steps AND 20m timer are completed - clicking opens friction gate */
                     <button
                       type="button"
                       onClick={() => {
-                        if (!areAllStepsChecked) {
-                          handleJumpToIncompleteTab();
-                        }
+                        setFrictionGateModal({ type: 'complete', targetQid: currentQuestion.id });
                       }}
-                      className="flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm bg-zinc-100 hover:bg-zinc-200/80 text-zinc-600 border border-zinc-200/90 transition-all flex items-center justify-center gap-2 shadow-xs group"
+                      className="flex-1 py-3 px-5 rounded-xl font-heading font-bold text-sm bg-zinc-100 hover:bg-zinc-200/80 text-zinc-600 border border-zinc-200/90 transition-all flex items-center justify-center gap-2 shadow-xs group cursor-pointer"
                     >
                       <Lock className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600" />
                       <span>
@@ -808,9 +937,16 @@ export default function App() {
                   {/* Quick Next Arrow */}
                   <button
                     type="button"
-                    onClick={() => hasNext && isNextUnlocked && handleSelectQuestion(currentQuestion.id + 1)}
-                    disabled={!hasNext || !isNextUnlocked}
-                    title={hasNext && !isNextUnlocked ? `Locked: Complete all 4 steps and 20m timer (${formatTimerDigits(timerSeconds)} left)` : 'Next question'}
+                    onClick={() => {
+                      if (!hasNext) return;
+                      if (isNextUnlocked) {
+                        handleSelectQuestion(currentQuestion.id + 1);
+                      } else {
+                        setFrictionGateModal({ type: 'question', targetQid: currentQuestion.id + 1 });
+                      }
+                    }}
+                    disabled={!hasNext}
+                    title={hasNext && !isNextUnlocked ? `Locked: Complete all 4 steps & 20m timer (${formatTimerDigits(timerSeconds)} left) - Click to review friction gate` : 'Next question'}
                     className="p-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-2xs"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -871,10 +1007,13 @@ export default function App() {
                     <button
                       key={q.id}
                       type="button"
-                      disabled={!isUnlocked}
                       onClick={() => {
-                        handleSelectQuestion(q.id);
-                        setActiveTab('concept');
+                        if (isUnlocked) {
+                          handleSelectQuestion(q.id);
+                          setActiveTab('concept');
+                        } else {
+                          setFrictionGateModal({ type: 'question', targetQid: q.id });
+                        }
                       }}
                       className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
                         isCurrent
@@ -882,7 +1021,7 @@ export default function App() {
                           : isDone
                           ? 'border-emerald-200 bg-emerald-50/60 text-zinc-900 hover:bg-emerald-50'
                           : !isUnlocked
-                          ? 'border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed opacity-60'
+                          ? 'border-zinc-200/60 bg-zinc-50/60 text-zinc-400 hover:border-zinc-300 hover:bg-zinc-100/60 cursor-pointer'
                           : 'border-zinc-200 bg-zinc-50 hover:bg-white text-zinc-800'
                       }`}
                     >
@@ -1308,13 +1447,85 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* User's Drafting Area (Textarea) */}
+                      {/* User's Drafting Area (Textarea with Thought Scaffolding & Friction Meter) */}
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-zinc-500 font-mono">
-                          <span>Draft your response in your own words:</span>
-                          <span>
-                            {currentNote.trim() ? currentNote.trim().split(/\s+/).filter(Boolean).length : 0} words
-                          </span>
+                        {/* Quick Insert Prompt Scaffold Chips */}
+                        <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
+                          <span className="text-[11px] text-zinc-400 font-mono">Insert Outline:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const template = "1. Core Definition & Problem Solved:\n\n2. Underlying Runtime / Memory Mechanism:\n\n3. High-Load Edge Cases & Failure Mode:\n";
+                              const nextVal = currentNote.trim() ? currentNote + "\n\n" + template : template;
+                              setCurrentNote(nextVal);
+                              db.setNote(activeTrack, activeQuestionId, nextVal);
+                              setNotesMap(db.getNotesMap());
+                              if (nextVal.trim().split(/\s+/).filter(Boolean).length >= 25) {
+                                db.setTabCheck(activeTrack, activeQuestionId, 'notes', true);
+                                setTabChecksMap(db.getTabChecksMap());
+                              }
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors"
+                          >
+                            + 3-Point Senior Blueprint
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const snippet = "\n• Problem it solves: ";
+                              const nextVal = currentNote + snippet;
+                              setCurrentNote(nextVal);
+                              db.setNote(activeTrack, activeQuestionId, nextVal);
+                              setNotesMap(db.getNotesMap());
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors"
+                          >
+                            + Problem Solved
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const snippet = "\n• Runtime mechanism: ";
+                              const nextVal = currentNote + snippet;
+                              setCurrentNote(nextVal);
+                              db.setNote(activeTrack, activeQuestionId, nextVal);
+                              setNotesMap(db.getNotesMap());
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors"
+                          >
+                            + Mechanism
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const snippet = "\n• High-load edge case: ";
+                              const nextVal = currentNote + snippet;
+                              setCurrentNote(nextVal);
+                              db.setNote(activeTrack, activeQuestionId, nextVal);
+                              setNotesMap(db.getNotesMap());
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors"
+                          >
+                            + Edge Case
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-zinc-600 font-semibold">Draft your response in your own words:</span>
+                          <div className="flex items-center gap-2">
+                            <span className={currentNoteWords >= 25 ? 'text-emerald-700 font-bold' : 'text-amber-700 font-semibold'}>
+                              {currentNoteWords} / 25 words min
+                            </span>
+                            {currentNoteWords >= 25 ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">
+                                ✓ Step Ready
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 font-medium">
+                                Needs formulation
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <textarea
@@ -1324,7 +1535,8 @@ export default function App() {
                             setCurrentNote(val);
                             db.setNote(activeTrack, activeQuestionId, val);
                             setNotesMap(db.getNotesMap());
-                            if (val.trim().length > 0) {
+                            const words = val.trim().split(/\s+/).filter(Boolean).length;
+                            if (words >= 25) {
                               db.setTabCheck(activeTrack, activeQuestionId, 'notes', true);
                               setTabChecksMap(db.getTabChecksMap());
                             }
@@ -1337,7 +1549,9 @@ export default function App() {
 
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-mono text-zinc-400">
-                            Auto-checks when typed • Saves on blur
+                            {currentNoteWords >= 25 
+                              ? '✓ Auto-checked (25+ words reached) • Saves on blur'
+                              : 'Auto-checks at 25 words • Saves on keystroke & blur'}
                           </span>
                           <button
                             type="button"
@@ -1489,6 +1703,213 @@ export default function App() {
 
         </div>
       </main>
+
+      {/* 5. FRICTION GATE MODAL (Anti-Rushing Checkpoint) */}
+      {frictionGateModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-w-lg w-full bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-zinc-100 bg-[#1e222b] text-white flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-heading text-white flex items-center gap-2">
+                    <span>Progression Lock Friction Gate</span>
+                  </h3>
+                  <p className="text-xs text-zinc-300 mt-0.5">
+                    {frictionGateModal.type === 'question'
+                      ? `Attempting to advance to Question ${frictionGateModal.targetQid} early`
+                      : frictionGateModal.type === 'toggle_lock'
+                      ? 'Attempting to disable Progression Lock globally'
+                      : `Attempting to mark Question ${currentQuestion.id} done early`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFrictionGateModal(null)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm text-zinc-700">
+              
+              {/* Context Callout */}
+              <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider font-mono">
+                  <Brain className="w-4 h-4 text-amber-600" />
+                  <span>Preparation Reality Check: Q{currentQuestion.id}</span>
+                </div>
+                <div className="space-y-1.5 text-xs text-amber-950/80">
+                  <div className="flex items-center justify-between">
+                    <span>⏱️ Focus Timer:</span>
+                    <span className="font-mono font-bold">
+                      {timerSeconds === 0 ? '✓ 20m focus satisfied' : `${formatTimerDigits(timerSeconds)} remaining`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>✍️ Spoken Script Draft:</span>
+                    <span className="font-mono font-bold">
+                      {currentNoteWords < 25 
+                        ? `⚠️ ${currentNoteWords}/25 words written`
+                        : `✓ ${currentNoteWords} words drafted`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>📋 Review Steps:</span>
+                    <span className="font-mono font-bold">
+                      {checkedStepsCount} of {questionTabs.length} steps checked
+                    </span>
+                  </div>
+                </div>
+                {currentNoteWords < 25 && (
+                  <p className="text-[11px] text-amber-800 italic pt-1 border-t border-amber-200/60 leading-relaxed">
+                    "Writing your explanation and saying it out loud is what builds interview memory. Skipping it returns you to the rush-and-forget loop."
+                  </p>
+                )}
+              </div>
+
+              {/* Primary Recommended Option: Stay & Practice */}
+              <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl space-y-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFrictionGateModal(null);
+                    setActiveTab('notes');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#1e222b] hover:bg-[#252b38] text-white font-heading font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <PenTool className="w-4 h-4 text-amber-400" />
+                  <span>Stay & Draft My Spoken Answer (Recommended)</span>
+                </button>
+                <p className="text-[11px] text-zinc-500">
+                  Takes 2 minutes to formulate the core definition and runtime mechanism.
+                </p>
+              </div>
+
+              {/* Deliberate Bypass Friction Challenge */}
+              <div className="border border-zinc-200 rounded-xl p-3.5 space-y-3 bg-white">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs uppercase tracking-wider text-zinc-600 font-mono">
+                    Deliberate Friction Challenge
+                  </span>
+                  <span className="text-[10px] text-zinc-400 font-mono">Anti-Impulse Gate</span>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  If you genuinely want to bypass this checkpoint, certify all 3 active recall criteria and hold the button for 2.5 seconds:
+                </p>
+
+                {/* Reflection Checkboxes */}
+                <div className="space-y-2 pt-1">
+                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-zinc-50 border border-zinc-200/80 hover:bg-zinc-100/70 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={frictionChecks.runtimeMechanism}
+                      onChange={(e) => setFrictionChecks((prev) => ({ ...prev, runtimeMechanism: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#1e222b] focus:ring-0"
+                    />
+                    <span className="text-xs text-zinc-800">
+                      1. I understand the underlying runtime mechanism (CPython memory / Django ORM).
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-zinc-50 border border-zinc-200/80 hover:bg-zinc-100/70 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={frictionChecks.verbalRecall}
+                      onChange={(e) => setFrictionChecks((prev) => ({ ...prev, verbalRecall: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#1e222b] focus:ring-0"
+                    />
+                    <span className="text-xs text-zinc-800">
+                      2. I can explain this topic verbally out loud for 60 seconds without checking docs.
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 p-2 rounded-lg bg-zinc-50 border border-zinc-200/80 hover:bg-zinc-100/70 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={frictionChecks.antiRushingCommitment}
+                      onChange={(e) => setFrictionChecks((prev) => ({ ...prev, antiRushingCommitment: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#1e222b] focus:ring-0"
+                    />
+                    <span className="text-xs text-zinc-800">
+                      3. I accept that bypassing without drafting script returns me to the rushing loop.
+                    </span>
+                  </label>
+                </div>
+
+                {/* Hold to Unlock Button with Animated Progress */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={!allChecksChecked}
+                    onMouseDown={() => allChecksChecked && setIsHolding(true)}
+                    onMouseUp={() => setIsHolding(false)}
+                    onMouseLeave={() => setIsHolding(false)}
+                    onTouchStart={() => allChecksChecked && setIsHolding(true)}
+                    onTouchEnd={() => setIsHolding(false)}
+                    className={`relative w-full py-3 px-4 rounded-xl font-heading font-bold text-xs uppercase tracking-wider overflow-hidden transition-all select-none ${
+                      allChecksChecked
+                        ? 'bg-amber-500 text-white shadow-sm cursor-pointer active:scale-[0.99]'
+                        : 'bg-zinc-100 text-zinc-400 border border-zinc-200 cursor-not-allowed'
+                    }`}
+                  >
+                    {/* Fill Bar during hold */}
+                    {allChecksChecked && (
+                      <div
+                        className="absolute inset-0 bg-amber-600 transition-all duration-75 ease-linear pointer-events-none"
+                        style={{ width: `${holdProgress}%` }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      {!allChecksChecked ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Check all 3 criteria above to unlock hold</span>
+                        </>
+                      ) : isHolding ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5 animate-spin" />
+                          <span>Holding... {Math.round((holdProgress / 100) * 2.5 * 10) / 10}s / 2.5s</span>
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>
+                            {frictionGateModal.type === 'question'
+                              ? `Press & Hold 2.5s to Unlock Q${frictionGateModal.targetQid}`
+                              : frictionGateModal.type === 'toggle_lock'
+                              ? 'Press & Hold 2.5s to Disable Strict Lock'
+                              : 'Press & Hold 2.5s to Force Complete Q' + currentQuestion.id}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                  {allChecksChecked && (
+                    <p className="text-[10px] text-zinc-400 text-center mt-1.5 font-mono">
+                      {isHolding ? 'Hold steadily until bar reaches 100%...' : 'Press and keep holding down for 2.5 seconds'}
+                    </p>
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Clean Minimal Full-Width Footer */}
       <footer className="w-full mt-auto px-6 py-4 border-t border-zinc-200/70 bg-white text-center text-xs text-zinc-400 font-mono">
