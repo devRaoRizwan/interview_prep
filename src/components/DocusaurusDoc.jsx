@@ -156,7 +156,7 @@ export function DocTable({ headers = [], rows = [] }) {
                 {row.map((cell, cellIdx) => (
                   <td key={cellIdx} className="py-2.5 px-3.5 text-zinc-800 leading-relaxed font-sans align-top">
                     {typeof cell === 'string' && (cell.startsWith('`') || cell.includes('`')) ? (
-                      <span className="font-mono text-[11px] bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-900 border border-zinc-200/70 inline-block font-semibold">
+                      <span className="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded-md text-zinc-900 border border-zinc-200/90 inline-block font-semibold shadow-2xs">
                         {cell.replace(/`/g, '')}
                       </span>
                     ) : (

@@ -62,7 +62,7 @@ function FormattedSummary({ text }) {
           return (
             <code 
               key={i} 
-              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded bg-[#202532] text-amber-300 font-semibold border border-[#303748] shadow-xs"
+              className="inline-block font-mono text-[11px] sm:text-xs px-1.5 py-0.5 mx-0.5 rounded-md bg-white text-zinc-900 font-semibold border border-zinc-200/90 shadow-2xs"
             >
               {displayToken}
             </code>
@@ -179,6 +179,75 @@ export default function App() {
       setIsHolding(false);
     }
   }, [frictionGateModal]);
+
+  // Paused Timer Alert Modal: { isOpen: boolean }
+  const [showTimerStoppedModal, setShowTimerStoppedModal] = useState(false);
+  const lastStoppedModalDismissedAt = React.useRef(0);
+
+  // Trigger check for paused timer dialog
+  const checkPromptTimerStopped = useCallback((force = false) => {
+    const key = getQuestionKey(activeTrack, activeQuestionId);
+    const isDone = !!completedMap[key];
+    if (isTimerRunning || timerSeconds <= 0 || isDone) {
+      setShowTimerStoppedModal(false);
+      return;
+    }
+
+    const now = Date.now();
+    // 90s cooldown unless forced by window focus / tab re-entry
+    if (!force && (now - lastStoppedModalDismissedAt.current < 90000)) {
+      return;
+    }
+
+    setShowTimerStoppedModal(true);
+  }, [activeTrack, activeQuestionId, completedMap, getQuestionKey, isTimerRunning, timerSeconds]);
+
+  const handleResumeTimerFromModal = useCallback(() => {
+    setIsTimerRunning(true);
+    db.saveQuestionTimer(activeTrack, activeQuestionId, {
+      secondsLeft: timerSeconds,
+      scriptSecondsLeft: scriptTimerSeconds,
+      isRunning: true,
+    });
+    setShowTimerStoppedModal(false);
+  }, [activeTrack, activeQuestionId, timerSeconds, scriptTimerSeconds]);
+
+  const handleDismissTimerStoppedModal = useCallback(() => {
+    lastStoppedModalDismissedAt.current = Date.now();
+    setShowTimerStoppedModal(false);
+  }, []);
+
+  // When user returns to tab after being away: prompt if timer was left stopped
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        checkPromptTimerStopped(true);
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    return () => {
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    };
+  }, [checkPromptTimerStopped]);
+
+  // When user switches tabs while timer is stopped: prompt dialog
+  const prevTabRef = React.useRef(activeTab);
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+      checkPromptTimerStopped();
+    }
+  }, [activeTab, checkPromptTimerStopped]);
+
+  // Initial check on load after 1.2s if opened in stopped state
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      checkPromptTimerStopped();
+    }, 1200);
+    return () => clearTimeout(timeout);
+  }, [checkPromptTimerStopped]);
 
   // Refs to allow stable intervals without restarting every second
   const scriptTimerSecondsRef = React.useRef(scriptTimerSeconds);
@@ -331,6 +400,9 @@ export default function App() {
   const handleToggleTimer = useCallback(() => {
     setIsTimerRunning((prev) => {
       const next = !prev;
+      if (next) {
+        setShowTimerStoppedModal(false);
+      }
       db.saveQuestionTimer(activeTrack, activeQuestionId, {
         secondsLeft: timerSeconds,
         scriptSecondsLeft: scriptTimerSeconds,
@@ -343,6 +415,7 @@ export default function App() {
   const handleResetTimer = useCallback(() => {
     setTimerSeconds(QUESTION_TIMER_SECONDS);
     setIsTimerRunning(true);
+    setShowTimerStoppedModal(false);
     db.saveQuestionTimer(activeTrack, activeQuestionId, {
       secondsLeft: QUESTION_TIMER_SECONDS,
       scriptSecondsLeft: scriptTimerSeconds,
@@ -676,12 +749,23 @@ export default function App() {
             </div>
 
             {/* 20-MINUTE FOCUS SESSION STATUS INDICATOR PILL */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200/80 shadow-xs">
-              <span className={`w-2 h-2 rounded-full ${timerSeconds === 0 ? 'bg-emerald-500' : isTimerRunning ? 'bg-cyan-500 animate-pulse' : 'bg-amber-400'}`} />
+            <button
+              type="button"
+              onClick={handleToggleTimer}
+              title={timerSeconds === 0 ? '20m Focus Session Done' : isTimerRunning ? 'Timer Running (Click to Pause)' : 'Timer Stopped (Click to Resume)'}
+              className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border transition-all cursor-pointer ${
+                timerSeconds === 0
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : isTimerRunning
+                  ? 'bg-zinc-100 border-zinc-200/80 text-zinc-800'
+                  : 'bg-amber-50 border-amber-300 text-amber-900 shadow-2xs'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${timerSeconds === 0 ? 'bg-emerald-500' : isTimerRunning ? 'bg-cyan-500 animate-pulse' : 'bg-amber-500 animate-ping'}`} />
               <span className={`font-mono text-xs font-bold ${timerSeconds === 0 ? 'text-emerald-700 font-extrabold' : 'text-zinc-800'}`}>
-                {timerSeconds === 0 ? '20m Focus Done ✓' : `${formatTimerDigits(timerSeconds)} left`}
+                {timerSeconds === 0 ? '20m Focus Done ✓' : isTimerRunning ? `${formatTimerDigits(timerSeconds)} left` : `Stopped: ${formatTimerDigits(timerSeconds)} (Resume)`}
               </span>
-            </div>
+            </button>
           </div>
 
           {/* Center: Track Switcher */}
@@ -965,7 +1049,10 @@ export default function App() {
                         <button
                           key={t.id}
                           type="button"
-                          onClick={() => setActiveTab(t.id)}
+                          onClick={() => {
+                            setActiveTab(t.id);
+                            checkPromptTimerStopped();
+                          }}
                           className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
                             done
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold'
@@ -1112,6 +1199,31 @@ export default function App() {
               </div>
             </div>
 
+            {/* Paused Timer Alert Strip (Shows when timer is stopped on an active incomplete question) */}
+            {!isTimerRunning && timerSeconds > 0 && !isCurrentCompleted && (
+              <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <span className="font-mono text-xs font-bold text-amber-950">
+                    Time is Stopped ({formatTimerDigits(timerSeconds)} left)
+                  </span>
+                  <span className="hidden sm:inline text-xs text-amber-800/80 font-sans truncate">
+                    — Resume the clock so your study & drafting time counts!
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleResumeTimerFromModal}
+                    className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-mono font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Play className="w-3 h-3 fill-white" />
+                    <span>Resume</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Interactive Developer Documentation Tabs (Facia Developer Style) */}
             <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-xs overflow-hidden">
               
@@ -1134,7 +1246,10 @@ export default function App() {
                       {/* Clickable Tab Checkbox Button */}
                       <button
                         type="button"
-                        onClick={(e) => handleToggleTabCheck(tab.id, e)}
+                        onClick={(e) => {
+                          handleToggleTabCheck(tab.id, e);
+                          checkPromptTimerStopped();
+                        }}
                         title={isChecked ? `Uncheck ${tab.label}` : `Mark ${tab.label} as completed`}
                         className="pl-2.5 pr-1.5 py-1.5 focus:outline-none"
                       >
@@ -1148,8 +1263,11 @@ export default function App() {
                       {/* Tab Selector Button */}
                       <button
                         type="button"
-                        onClick={() => setActiveTab(tab.id)}
-                        className="pr-3 py-1.5 text-xs font-heading flex items-center gap-1.5 focus:outline-none"
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          checkPromptTimerStopped();
+                        }}
+                        className="pr-3 py-1.5 text-xs font-heading flex items-center gap-1.5 focus:outline-none cursor-pointer"
                       >
                         <TabIcon className={`w-3.5 h-3.5 ${tab.iconColor}`} />
                         <span className={isChecked ? 'line-through decoration-zinc-300 opacity-80' : ''}>
@@ -1530,7 +1648,9 @@ export default function App() {
 
                         <textarea
                           value={currentNote}
+                          onFocus={() => checkPromptTimerStopped()}
                           onChange={(e) => {
+                            checkPromptTimerStopped();
                             const val = e.target.value;
                             setCurrentNote(val);
                             db.setNote(activeTrack, activeQuestionId, val);
@@ -1661,8 +1781,11 @@ export default function App() {
                   {/* Check Button for the active tab */}
                   <button
                     type="button"
-                    onClick={() => handleToggleTabCheck(activeTab)}
-                    className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-1.5 transition-colors ${
+                    onClick={() => {
+                      handleToggleTabCheck(activeTab);
+                      checkPromptTimerStopped();
+                    }}
+                    className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                       isTabChecked(activeTab)
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                         : 'border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-700'
@@ -1685,8 +1808,11 @@ export default function App() {
                   {questionTabs.findIndex((t) => t.id === activeTab) < questionTabs.length - 1 && (
                     <button
                       type="button"
-                      onClick={() => handleMarkTabDoneAndNext(activeTab)}
-                      className="px-3 py-1.5 rounded-lg font-semibold text-zinc-700 hover:text-[#1a1e27] hover:bg-zinc-100 flex items-center gap-1 transition-colors"
+                      onClick={() => {
+                        handleMarkTabDoneAndNext(activeTab);
+                        checkPromptTimerStopped();
+                      }}
+                      className="px-3 py-1.5 rounded-lg font-semibold text-zinc-700 hover:text-[#1a1e27] hover:bg-zinc-100 flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       <span>Next Step</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1772,6 +1898,11 @@ export default function App() {
                     </span>
                   </div>
                 </div>
+                {timerSeconds > 0 && checkedStepsCount >= questionTabs.length && (
+                  <p className="text-[11px] text-amber-900 bg-amber-100/70 p-2.5 rounded-lg border border-amber-200/90 font-sans mt-2 leading-relaxed">
+                    💡 <strong>Did your timer stop while you were working?</strong> If you already finished reviewing and drafted your spoken answer, certify the 3 active-recall criteria below to complete immediately without waiting.
+                  </p>
+                )}
                 {currentNoteWords < 25 && (
                   <p className="text-[11px] text-amber-800 italic pt-1 border-t border-amber-200/60 leading-relaxed">
                     "Writing your explanation and saying it out loud is what builds interview memory. Skipping it returns you to the rush-and-forget loop."
@@ -1903,6 +2034,92 @@ export default function App() {
                   )}
                 </div>
 
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 6. TIME IS STOPPED DIALOGUE BOX (Resume or OK) */}
+      {showTimerStoppedModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+            
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-zinc-100 bg-[#1e222b] text-white flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400">
+                  <Clock className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-heading text-white flex items-center gap-2">
+                    <span>Time is Stopped</span>
+                  </h3>
+                  <p className="text-xs text-zinc-300 mt-0.5">
+                    Focus Clock Paused • Q{currentQuestion.id}: {currentQuestion.title.length > 25 ? currentQuestion.title.slice(0, 25) + '...' : currentQuestion.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissTimerStoppedModal}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4 text-xs sm:text-sm text-zinc-700">
+              
+              <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-amber-950 flex items-center gap-1.5 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    Timer Status:
+                  </span>
+                  <span className="font-mono font-extrabold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded text-xs border border-amber-200">
+                    {formatTimerDigits(timerSeconds)} remaining
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900/90 leading-relaxed font-sans m-0">
+                  You are actively working on this question, but the 20-minute focus timer is currently paused. Resume now so the time you spend reading, thinking, and drafting counts toward question completion.
+                </p>
+              </div>
+
+              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl space-y-1 text-xs text-zinc-600">
+                <div className="font-semibold text-zinc-800 font-mono text-[11px] uppercase tracking-wider">
+                  Why this helps:
+                </div>
+                <p className="m-0 leading-relaxed">
+                  If you complete the question while the timer is paused, you would otherwise have to wait for the remaining time before marking the question complete.
+                </p>
+              </div>
+
+              {/* Action Buttons: Resume or OK */}
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleResumeTimerFromModal}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#1e222b] hover:bg-[#282e3b] text-white font-heading font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  <span>Resume Timer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissTimerStoppedModal}
+                  className="px-5 py-2.5 rounded-xl border border-zinc-200 hover:bg-zinc-100 text-zinc-700 font-heading font-bold text-sm transition-colors cursor-pointer"
+                >
+                  <span>OK</span>
+                </button>
               </div>
 
             </div>
