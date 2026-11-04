@@ -1186,10 +1186,16 @@ export default function App() {
                         ) : null}
                       </div>
 
-                      {/* Environment Admonition */}
-                      <Admonition type="tip" title="Clean Environment Setup">
-                        Always execute these commands in an active virtual environment (e.g. <code className="font-mono text-[11px] bg-emerald-100 px-1 py-0.5 rounded text-emerald-900 border border-emerald-300">source .venv/bin/activate</code>) to ensure clean dependency isolation without host OS collisions.
-                      </Admonition>
+                      {/* Did You Know / Pro Tip Admonition */}
+                      {docSpecs?.didYouKnow ? (
+                        <Admonition type="tip" title={docSpecs.didYouKnow.title || "💡 DID YOU KNOW?"}>
+                          <FormattedSummary text={docSpecs.didYouKnow.content} />
+                        </Admonition>
+                      ) : (
+                        <Admonition type="tip" title="Clean Environment Setup">
+                          Always execute these commands in an active virtual environment (e.g. <code className="font-mono text-[11px] bg-emerald-100 px-1 py-0.5 rounded text-emerald-900 border border-emerald-300">source .venv/bin/activate</code>) to ensure clean dependency isolation without host OS collisions.
+                        </Admonition>
+                      )}
                     </div>
                   )}
 
